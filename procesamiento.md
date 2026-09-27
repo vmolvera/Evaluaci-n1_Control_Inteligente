@@ -51,9 +51,9 @@ El sistema VICON proporciona información correspondiente a la posición y orien
 
 Las variables principales utilizadas fueron:
 
-- ($$x$$): posición global longitudinal.
-- ($$y$$): posición global lateral.
-- ($$\psi$$): orientación o yaw del robot.
+- ($$x$$) posición global longitudinal.
+- ($$y$$) posición global lateral.
+- ($$\psi$$) orientación o yaw del robot.
 
 El programa identifica automáticamente las columnas correspondientes a posición y orientación y realiza interpolación cuando existen muestras faltantes.
 
@@ -107,7 +107,7 @@ Este método permite suavizar las señales y calcular sus derivadas conservando 
 
 A partir de las posiciones filtradas se calcularon las velocidades globales:
 
-%%
+$$
 v_x=\frac{dx}{dt}
 $$
 
