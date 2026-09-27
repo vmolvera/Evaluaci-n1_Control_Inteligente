@@ -97,9 +97,9 @@ Los resultados muestran una elevada correspondencia entre los comandos experimen
 
 ## Integrantes
 
-- **Víctor Manuel Olvera de la Cruz**
 - Diego Márquez Alemán
 - Carlos Sebastián Ortega Hernández
+- Víctor Manuel Olvera de la Cruz
 - Rodrigo Cruz Bartolo
 
 ---
