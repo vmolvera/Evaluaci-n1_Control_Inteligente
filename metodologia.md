@@ -147,9 +147,9 @@ A partir de las posiciones medidas se calcularon las velocidades globales:
 
 $$
 v_x = \frac{dx}{dt}
-
+\]
 v_y = \frac{dy}{dt}
-
+\]
 y la velocidad angular:
 
 \omega_z = \frac{d\psi}{dt}
@@ -167,7 +167,7 @@ Las velocidades en el marco del robot se calcularon mediante:
 
 $$
 v_{bx}=v_x\cos(\psi)+v_y\sin(\psi)
-
+\]
 v_{by}=-v_x\sin(\psi)+v_y\cos(\psi)
 $$
 
