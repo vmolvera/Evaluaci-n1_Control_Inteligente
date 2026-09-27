@@ -30,9 +30,9 @@ $$
 
 donde:
 
-- \(U\) representa los pulsos enviados al robot.
-- \(V\) representa las velocidades medidas.
-- \(f(\cdot)\) representa la aproximación realizada por la Red Neuronal Artificial.
+- \$$(U\)$$ representa los pulsos enviados al robot.
+- \$$(V\)$$ representa las velocidades medidas.
+- \$$(f(\cdot)\)$$ representa la aproximación realizada por la Red Neuronal Artificial.
 
 La respuesta dinámica del RoboMaster se representa mediante:
 
