@@ -1,0 +1,165 @@
+/* =========================================================
+   PORTAFOLIO CONTROL INTELIGENTE - ESTILO IBERO
+   ========================================================= */
+
+$ibero-red: #E00034;
+$ibero-gray: #82786F;
+$ibero-black: #231F20;
+$ibero-light: #F7F6F5;
+
+/* =========================================================
+   CABECERA
+   ========================================================= */
+
+.site-header {
+  background-color: $ibero-red !important;
+  border-bottom: none !important;
+}
+
+.site-title {
+  color: #ffffff !important;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.site-button {
+  color: #ffffff !important;
+}
+
+.site-button:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================================
+   BARRA LATERAL
+   ========================================================= */
+
+.side-bar {
+  background-color: $ibero-light;
+}
+
+.nav-list .nav-list-item .nav-list-link {
+  color: #403b39;
+  border-radius: 5px;
+}
+
+.nav-list .nav-list-item .nav-list-link:hover {
+  color: $ibero-red;
+  background-color: rgba(224, 0, 52, 0.05);
+}
+
+.nav-list .nav-list-item .nav-list-link.active {
+  color: $ibero-red;
+  font-weight: 600;
+  background-color: rgba(224, 0, 52, 0.08);
+}
+
+/* =========================================================
+   CONTENIDO PRINCIPAL
+   ========================================================= */
+
+.main-content {
+  line-height: 1.7;
+}
+
+.main-content h1 {
+  color: $ibero-black;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+}
+
+.main-content h2 {
+  color: $ibero-black;
+  font-weight: 650;
+  border-bottom: 1px solid #e8e5e3;
+  padding-bottom: 0.35rem;
+  margin-top: 2.5rem;
+}
+
+.main-content h3 {
+  color: $ibero-gray;
+  font-weight: 600;
+}
+
+/* =========================================================
+   ENLACES
+   ========================================================= */
+
+.main-content a {
+  color: $ibero-red;
+}
+
+.main-content a:hover {
+  color: #a80027;
+}
+
+/* =========================================================
+   TABLAS
+   ========================================================= */
+
+.main-content table {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.main-content th {
+  background-color: $ibero-red;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.main-content td {
+  vertical-align: middle;
+}
+
+/* =========================================================
+   BLOQUES DE CÓDIGO
+   ========================================================= */
+
+.main-content pre {
+  border: 1px solid #dedad8;
+  border-radius: 8px;
+}
+
+.main-content code {
+  border-radius: 4px;
+}
+
+/* =========================================================
+   IMÁGENES
+   ========================================================= */
+
+.main-content img {
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+/* =========================================================
+   DIVISORES
+   ========================================================= */
+
+.main-content hr {
+  border-color: #e8e5e3;
+}
+
+/* =========================================================
+   SELECCIÓN DE TEXTO
+   ========================================================= */
+
+::selection {
+  background-color: rgba(224, 0, 52, 0.18);
+}
+
+/* =========================================================
+   VERSIÓN MÓVIL
+   ========================================================= */
+
+@media (max-width: 50rem) {
+  .main-content h1 {
+    font-size: 2.2rem;
+  }
+
+  .main-content {
+    line-height: 1.6;
+  }
+}
