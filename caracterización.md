@@ -30,9 +30,9 @@ $$
 
 donde:
 
-- \($$U\$$) representa los pulsos enviados al robot.
-- \($$V\$$) representa las velocidades medidas.
-- \($$f(\cdot)\$$) representa la aproximación realizada por la Red Neuronal Artificial.
+- $U$ representa los pulsos enviados al robot.
+- $V$ representa las velocidades medidas.
+- $f(\cdot)$ representa la aproximación realizada por la Red Neuronal Artificial.
 
 La respuesta dinámica del RoboMaster se representa mediante:
 
@@ -47,9 +47,9 @@ $$
 
 donde:
 
-- \($$v_{bx}\$$): velocidad longitudinal medida en el marco del robot.
-- \($$v_{by}\$$): velocidad lateral medida en el marco del robot.
-- \($$\omega_z\$$): velocidad angular.
+- $v_{bx}$: velocidad longitudinal medida en el marco del robot.
+- $v_{by}$: velocidad lateral medida en el marco del robot.
+- $\omega_z$: velocidad angular.
 
 ---
 
@@ -129,8 +129,8 @@ $$
 
 donde:
 
-- \($$\mu_x\$$) corresponde a la media.
-- \($$\sigma_x\$$) corresponde a la desviación estándar.
+- $\mu_x$ corresponde a la media.
+- $\sigma_x$ corresponde a la desviación estándar.
 
 La normalización evita que variables con diferentes unidades o escalas tengan una influencia desproporcionada durante el entrenamiento.
 
@@ -162,15 +162,15 @@ Los parámetros utilizados durante el entrenamiento fueron:
 
 | Parámetro | Valor |
 |---|---:|
-| Retardos de salida \($$n_a\$$) | 3 |
-| Retardos de entrada \($$n_b\$$) | 3 |
+| Retardos de salida $n_a$ | 3 |
+| Retardos de entrada $n_b$ | 3 |
 | Neuronas ocultas | 50 |
 | Épocas máximas | 300 |
 | Learning rate | 0.002 |
 | Batch size | 256 |
 | Validación | 25 % |
 | Optimizador | Adam |
-| Regularización | \($$10^{-6}\$$) |
+| Regularización | $10^{-6}$ |
 | Early stopping | 30 épocas |
 
 El optimizador Adam fue utilizado para actualizar los pesos de la red durante el entrenamiento.
