@@ -1,7 +1,19 @@
 title: "IBERO | Portafolio"
-description: Evaluación I - Control Por RNA 
+description: "Evaluación I - Control por RNA"
+
 theme: just-the-docs
 color_scheme: ibero
 
-url: https://just-the-docs.github.io
+url: "https://vmolvera.github.io"
+baseurl: "/Evaluaci-n1_Control_Inteligente"
 
+search_enabled: true
+heading_anchors: true
+
+aux_links:
+  "Repositorio en GitHub":
+    - "https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente"
+
+aux_links_new_tab: true
+
+gh_edit_link: false
