@@ -101,24 +101,14 @@ VICON permitió registrar la evolución temporal de:
 De manera simultánea se almacenaron los comandos enviados al chasis:
 
 $$
-\[
-u_x
-\]
-
-\[
-u_y
-\]
-
-\[
-u_z
-\]
+u_x , u_y , u_z
 $$
 
 donde:
 
-- \(u_x\): comando de velocidad longitudinal.
-- \(u_y\): comando de velocidad lateral.
-- \(u_z\): comando de velocidad angular.
+- ($$u_x$$): comando de velocidad longitudinal.
+- ($$u_y$$): comando de velocidad lateral.
+- ($$u_z$$): comando de velocidad angular.
 
 El objetivo fue obtener pares de datos entrada-salida que permitieran posteriormente entrenar las Redes Neuronales Artificiales.
 
@@ -142,9 +132,7 @@ Fue necesario implementar un procedimiento de:
 Finalmente, ambas fuentes de información fueron llevadas a una frecuencia común de trabajo de:
 
 $$
-\[
 f_s = 100\;Hz
-\]
 $$
 
 ---
@@ -158,19 +146,13 @@ Posteriormente se utilizó un filtro **Savitzky-Golay** para suavizar las señal
 A partir de las posiciones medidas se calcularon las velocidades globales:
 
 $$
-\[
 v_x = \frac{dx}{dt}
-\]
 
-\[
 v_y = \frac{dy}{dt}
-\]
 
 y la velocidad angular:
 
-\[
 \omega_z = \frac{d\psi}{dt}
-\]
 $$
 
 ---
@@ -184,13 +166,9 @@ Por esta razón fue necesario transformar las velocidades globales al sistema de
 Las velocidades en el marco del robot se calcularon mediante:
 
 $$
-\[
 v_{bx}=v_x\cos(\psi)+v_y\sin(\psi)
-\]
 
-\[
 v_{by}=-v_x\sin(\psi)+v_y\cos(\psi)
-\]
 $$
 
 Esta transformación permitió relacionar correctamente la señal obtenida de nuestra red neuronal con el movimiento realmente ejecutado por el RoboMaster.
