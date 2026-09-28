@@ -3,9 +3,12 @@
    ========================================================= */
 
 $ibero-red: #E00034;
+$ibero-red-dark: #B00029;
 $ibero-gray: #82786F;
 $ibero-black: #231F20;
 $ibero-light: #F7F6F5;
+$ibero-border: #E5E2E0;
+
 
 /* =========================================================
    CABECERA
@@ -22,37 +25,187 @@ $ibero-light: #F7F6F5;
   letter-spacing: -0.3px;
 }
 
+.site-title:hover {
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+/* Botón del menú */
 .site-button {
   color: #ffffff !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .site-button:hover {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
+/* Iconos dentro de la cabecera */
+.site-header svg,
+.site-button svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+
 /* =========================================================
-   BARRA LATERAL
+   BARRA LATERAL Y NAVEGACIÓN
    ========================================================= */
 
 .side-bar {
   background-color: $ibero-light;
 }
 
+/* Enlaces del menú */
 .nav-list .nav-list-item .nav-list-link {
-  color: #403b39;
+  color: #403B39;
   border-radius: 5px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
+/* Hover */
 .nav-list .nav-list-item .nav-list-link:hover {
-  color: $ibero-red;
+  color: $ibero-red !important;
   background-color: rgba(224, 0, 52, 0.05);
 }
 
+/* Página activa */
 .nav-list .nav-list-item .nav-list-link.active {
-  color: $ibero-red;
+  color: $ibero-red !important;
   font-weight: 600;
   background-color: rgba(224, 0, 52, 0.08);
 }
+
+
+/* =========================================================
+   MENÚ PERMANENTE EN COMPUTADORA
+   ========================================================= */
+
+@media (min-width: 66.5rem) {
+
+  /*
+     Mantiene la barra roja superior ocupando todo el ancho.
+  */
+
+  .site-header {
+    position: relative;
+    z-index: 200;
+  }
+
+  /*
+     El menú de navegación queda fijo del lado izquierdo,
+     debajo de la cabecera.
+  */
+
+  .site-nav {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    position: fixed !important;
+
+    top: 94px;
+    left: 0;
+    bottom: 0;
+
+    width: 285px !important;
+
+    padding:
+      1.25rem
+      0.8rem
+      2rem
+      0.8rem;
+
+    overflow-y: auto;
+
+    background-color: $ibero-light !important;
+
+    border-right:
+      1px solid
+      $ibero-border;
+
+    z-index: 100;
+  }
+
+  /*
+     Desplaza el contenido para que
+     no quede debajo del menú.
+  */
+
+  .main {
+    margin-left: 285px !important;
+  }
+
+  /*
+     En computadora ya no necesitamos
+     botón hamburguesa.
+  */
+
+  #menu-button {
+    display: none !important;
+  }
+
+  /*
+     Separación de los enlaces del menú.
+  */
+
+  .nav-list {
+    padding-top: 0.25rem;
+  }
+
+  .nav-list .nav-list-item {
+    margin-bottom: 0.15rem;
+  }
+
+  .nav-list .nav-list-item .nav-list-link {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+}
+
+
+/* =========================================================
+   TABLET Y CELULAR
+   ========================================================= */
+
+@media (max-width: 66.49rem) {
+
+  /*
+     En móvil no se mantiene el menú fijo.
+     Se conserva el comportamiento desplegable.
+  */
+
+  .site-nav {
+    position: static !important;
+    width: auto !important;
+  }
+
+  /*
+     Botón hamburguesa siempre visible.
+  */
+
+  #menu-button {
+    display: flex !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  #menu-button svg {
+    color: #ffffff !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+  }
+}
+
 
 /* =========================================================
    CONTENIDO PRINCIPAL
@@ -62,24 +215,35 @@ $ibero-light: #F7F6F5;
   line-height: 1.7;
 }
 
+
+/* Título principal */
 .main-content h1 {
   color: $ibero-black;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.7px;
 }
 
+
+/* Secciones */
 .main-content h2 {
   color: $ibero-black;
   font-weight: 650;
-  border-bottom: 1px solid #e8e5e3;
+
+  border-bottom:
+    1px solid
+    #E8E5E3;
+
   padding-bottom: 0.35rem;
   margin-top: 2.5rem;
 }
 
+
+/* Subsecciones */
 .main-content h3 {
   color: $ibero-gray;
   font-weight: 600;
 }
+
 
 /* =========================================================
    ENLACES
@@ -90,8 +254,9 @@ $ibero-light: #F7F6F5;
 }
 
 .main-content a:hover {
-  color: #a80027;
+  color: $ibero-red-dark;
 }
+
 
 /* =========================================================
    TABLAS
@@ -100,30 +265,45 @@ $ibero-light: #F7F6F5;
 .main-content table {
   border-radius: 6px;
   overflow: hidden;
+
+  box-shadow:
+    0 2px 8px
+    rgba(0, 0, 0, 0.05);
 }
 
+
+/* Encabezados de tablas */
 .main-content th {
-  background-color: $ibero-red;
-  color: #ffffff;
+  background-color: $ibero-red !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 
+
+/* Celdas */
 .main-content td {
   vertical-align: middle;
 }
+
 
 /* =========================================================
    BLOQUES DE CÓDIGO
    ========================================================= */
 
 .main-content pre {
-  border: 1px solid #dedad8;
+  border:
+    1px solid
+    #DEDAD8;
+
   border-radius: 8px;
 }
 
+
+/* Código en línea */
 .main-content code {
   border-radius: 4px;
 }
+
 
 /* =========================================================
    IMÁGENES
@@ -131,35 +311,90 @@ $ibero-light: #F7F6F5;
 
 .main-content img {
   border-radius: 6px;
+
   max-width: 100%;
+  height: auto;
 }
+
 
 /* =========================================================
    DIVISORES
    ========================================================= */
 
 .main-content hr {
-  border-color: #e8e5e3;
+  border-color: #E8E5E3;
 }
+
+
+/* =========================================================
+   ANCLAS DE LOS ENCABEZADOS
+   ========================================================= */
+
+/*
+   Oculta el icono de cadena mientras
+   el cursor no se encuentra sobre el título.
+*/
+
+.anchor-heading {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+h1:hover .anchor-heading,
+h2:hover .anchor-heading,
+h3:hover .anchor-heading,
+h4:hover .anchor-heading {
+  opacity: 1;
+}
+
 
 /* =========================================================
    SELECCIÓN DE TEXTO
    ========================================================= */
 
 ::selection {
-  background-color: rgba(224, 0, 52, 0.18);
+  background-color:
+    rgba(224, 0, 52, 0.18);
 }
 
+
 /* =========================================================
-   VERSIÓN MÓVIL
+   SCROLL DEL MENÚ
+   ========================================================= */
+
+.site-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.site-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.site-nav::-webkit-scrollbar-thumb {
+  background-color: #C9C3BF;
+  border-radius: 10px;
+}
+
+.site-nav::-webkit-scrollbar-thumb:hover {
+  background-color: $ibero-gray;
+}
+
+
+/* =========================================================
+   AJUSTES PARA PANTALLAS PEQUEÑAS
    ========================================================= */
 
 @media (max-width: 50rem) {
+
   .main-content h1 {
     font-size: 2.2rem;
   }
 
   .main-content {
     line-height: 1.6;
+  }
+
+  .main-content table {
+    font-size: 0.9rem;
   }
 }
