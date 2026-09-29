@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 7. Control de Posición y Orientación
+title: 6. Control de Posición y Orientación
 nav_order: 8
 permalink: /control-posicion/
 ---
