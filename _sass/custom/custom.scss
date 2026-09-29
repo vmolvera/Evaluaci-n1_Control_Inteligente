@@ -398,3 +398,46 @@ h4:hover .anchor-heading {
     font-size: 0.9rem;
   }
 }
+
+/* =========================================================
+   LOGO IBERO EN CABECERA
+   ========================================================= */
+
+.site-title {
+  display: flex !important;
+  align-items: center;
+  gap: 0.7rem;
+
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+/* Tamaño del logo */
+.site-logo {
+  max-height: 52px !important;
+  width: auto !important;
+  object-fit: contain;
+}
+
+/* Texto después del logo */
+.site-title::after {
+  content: "| Portafolio";
+
+  color: #ffffff;
+  font-size: 1.65rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+/* Ajuste para teléfono */
+@media (max-width: 50rem) {
+
+  .site-logo {
+    max-height: 40px !important;
+  }
+
+  .site-title::after {
+    font-size: 1.25rem;
+  }
+}
