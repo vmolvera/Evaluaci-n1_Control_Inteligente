@@ -1,83 +1,175 @@
 /* =========================================================
-   PORTAFOLIO CONTROL INTELIGENTE - ESTILO IBERO
+   PORTAFOLIO CONTROL INTELIGENTE
+   UNIVERSIDAD IBEROAMERICANA
    ========================================================= */
-
-$ibero-red: #E00034;
-$ibero-red-dark: #B00029;
-$ibero-gray: #82786F;
-$ibero-black: #231F20;
-$ibero-light: #F7F6F5;
-$ibero-border: #E5E2E0;
 
 
 /* =========================================================
-   CABECERA
+   COLORES
+   ========================================================= */
+
+$ibero-red: #EE3D42;
+$ibero-red-dark: #C92F35;
+
+$ibero-gray: #82786F;
+$ibero-black: #231F20;
+$ibero-light: #F7F6F5;
+
+$ibero-border: #E5E2E0;
+$ibero-text: #4A4543;
+
+
+/* =========================================================
+   CABECERA SUPERIOR
    ========================================================= */
 
 .site-header {
   background-color: $ibero-red !important;
   border-bottom: none !important;
+
+  min-height: 94px;
+
+  display: flex;
+  align-items: center;
+
+  position: relative;
+  z-index: 300;
 }
 
+
+/* =========================================================
+   TÍTULO / LOGO
+   ========================================================= */
+
 .site-title {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 0.75rem;
+
   color: #ffffff !important;
+
   font-weight: 700;
   letter-spacing: -0.3px;
+
+  text-decoration: none !important;
 }
+
+
+/* Mantener blanco al pasar el cursor */
 
 .site-title:hover {
   color: #ffffff !important;
-  text-decoration: none;
+  text-decoration: none !important;
 }
 
-/* Botón del menú */
+
+/* =========================================================
+   LOGO IBERO
+   ========================================================= */
+
+.site-logo {
+  display: block !important;
+
+  width: auto !important;
+
+  max-width: 190px !important;
+  max-height: 78px !important;
+
+  object-fit: contain;
+
+  /*
+    El fondo del logo y de la cabecera usan
+    el mismo rojo #EE3D42 para que se integren.
+  */
+}
+
+
+/* Texto adicional junto al logo */
+
+.site-title::after {
+  content: "| Portafolio";
+
+  color: #ffffff;
+
+  font-size: 1.6rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   BOTÓN HAMBURGUESA
+   ========================================================= */
+
 .site-button {
   color: #ffffff !important;
+
   opacity: 1 !important;
   visibility: visible !important;
 }
+
 
 .site-button:hover {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Iconos dentro de la cabecera */
+
+/* Iconos */
+
 .site-header svg,
 .site-button svg {
   color: #ffffff !important;
+
   fill: currentColor !important;
   stroke: currentColor !important;
+
+  opacity: 1 !important;
 }
 
 
 /* =========================================================
-   BARRA LATERAL Y NAVEGACIÓN
+   BARRA LATERAL
    ========================================================= */
 
 .side-bar {
   background-color: $ibero-light;
 }
 
-/* Enlaces del menú */
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+
 .nav-list .nav-list-item .nav-list-link {
   color: #403B39;
+
   border-radius: 5px;
+
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
 }
 
+
 /* Hover */
+
 .nav-list .nav-list-item .nav-list-link:hover {
   color: $ibero-red !important;
-  background-color: rgba(224, 0, 52, 0.05);
+
+  background-color: rgba(238, 61, 66, 0.06);
 }
 
-/* Página activa */
+
+/* Página seleccionada */
+
 .nav-list .nav-list-item .nav-list-link.active {
   color: $ibero-red !important;
-  font-weight: 600;
-  background-color: rgba(224, 0, 52, 0.08);
+
+  font-weight: 700;
+
+  background-color: rgba(238, 61, 66, 0.10);
 }
 
 
@@ -88,21 +180,12 @@ $ibero-border: #E5E2E0;
 @media (min-width: 66.5rem) {
 
   /*
-     Mantiene la barra roja superior ocupando todo el ancho.
-  */
-
-  .site-header {
-    position: relative;
-    z-index: 200;
-  }
-
-  /*
-     El menú de navegación queda fijo del lado izquierdo,
-     debajo de la cabecera.
+    El menú queda fijo del lado izquierdo.
   */
 
   .site-nav {
     display: block !important;
+
     visibility: visible !important;
     opacity: 1 !important;
 
@@ -128,42 +211,47 @@ $ibero-border: #E5E2E0;
       1px solid
       $ibero-border;
 
-    z-index: 100;
+    z-index: 150;
   }
 
+
   /*
-     Desplaza el contenido para que
-     no quede debajo del menú.
+    Espacio para evitar que el contenido
+    quede debajo del menú.
   */
 
   .main {
     margin-left: 285px !important;
   }
 
+
   /*
-     En computadora ya no necesitamos
-     botón hamburguesa.
+    En escritorio no necesitamos
+    el botón hamburguesa.
   */
 
   #menu-button {
     display: none !important;
   }
 
+
   /*
-     Separación de los enlaces del menú.
+    Separación entre opciones.
   */
 
   .nav-list {
     padding-top: 0.25rem;
   }
 
+
   .nav-list .nav-list-item {
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.12rem;
   }
 
+
   .nav-list .nav-list-item .nav-list-link {
-    padding-top: 0.55rem;
-    padding-bottom: 0.55rem;
+    padding-top: 0.52rem;
+    padding-bottom: 0.52rem;
   }
 }
 
@@ -175,31 +263,43 @@ $ibero-border: #E5E2E0;
 @media (max-width: 66.49rem) {
 
   /*
-     En móvil no se mantiene el menú fijo.
-     Se conserva el comportamiento desplegable.
+    El menú vuelve a funcionar
+    como desplegable.
   */
 
   .site-nav {
     position: static !important;
+
     width: auto !important;
   }
 
+
   /*
-     Botón hamburguesa siempre visible.
+    Mostrar hamburguesa.
   */
 
   #menu-button {
     display: flex !important;
+
     color: #ffffff !important;
+
     opacity: 1 !important;
     visibility: visible !important;
   }
 
+
   #menu-button svg {
     color: #ffffff !important;
+
     fill: currentColor !important;
     stroke: currentColor !important;
   }
+
+
+  /*
+    El contenido vuelve a ocupar
+    todo el ancho.
+  */
 
   .main {
     margin-left: 0 !important;
@@ -213,35 +313,71 @@ $ibero-border: #E5E2E0;
 
 .main-content {
   line-height: 1.7;
+
+  color: $ibero-text;
 }
 
 
-/* Título principal */
+/* =========================================================
+   TÍTULO PRINCIPAL
+   ========================================================= */
+
 .main-content h1 {
   color: $ibero-black;
-  font-weight: 650;
+
+  font-weight: 700;
+
   letter-spacing: -0.7px;
 }
 
 
-/* Secciones */
+/* =========================================================
+   ENCABEZADOS H2
+   ========================================================= */
+
 .main-content h2 {
   color: $ibero-black;
-  font-weight: 650;
+
+  font-weight: 700;
 
   border-bottom:
     1px solid
     #E8E5E3;
 
   padding-bottom: 0.35rem;
+
   margin-top: 2.5rem;
 }
 
 
-/* Subsecciones */
+/* =========================================================
+   ENCABEZADOS H3
+   ========================================================= */
+
 .main-content h3 {
   color: $ibero-gray;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   ENCABEZADOS H4
+   ========================================================= */
+
+.main-content h4 {
+  color: $ibero-black;
+
   font-weight: 600;
+}
+
+
+/* =========================================================
+   TEXTO EN NEGRITAS
+   ========================================================= */
+
+.main-content strong {
+  color: #4A4543;
 }
 
 
@@ -251,10 +387,17 @@ $ibero-border: #E5E2E0;
 
 .main-content a {
   color: $ibero-red;
+
+  text-decoration-color:
+    rgba(238, 61, 66, 0.35);
 }
+
 
 .main-content a:hover {
   color: $ibero-red-dark;
+
+  text-decoration-color:
+    $ibero-red-dark;
 }
 
 
@@ -263,26 +406,42 @@ $ibero-border: #E5E2E0;
    ========================================================= */
 
 .main-content table {
-  border-radius: 6px;
+  border-radius: 7px;
+
   overflow: hidden;
 
   box-shadow:
     0 2px 8px
     rgba(0, 0, 0, 0.05);
+
+  width: 100%;
 }
 
 
-/* Encabezados de tablas */
+/* Encabezado */
+
 .main-content th {
   background-color: $ibero-red !important;
+
   color: #ffffff !important;
-  font-weight: 600;
+
+  font-weight: 700;
+
+  vertical-align: middle;
 }
 
 
 /* Celdas */
+
 .main-content td {
   vertical-align: middle;
+}
+
+
+/* Alternancia ligera */
+
+.main-content tbody tr:nth-child(even) {
+  background-color: #FAF9F8;
 }
 
 
@@ -296,10 +455,13 @@ $ibero-border: #E5E2E0;
     #DEDAD8;
 
   border-radius: 8px;
+
+  padding: 1rem;
 }
 
 
 /* Código en línea */
+
 .main-content code {
   border-radius: 4px;
 }
@@ -310,10 +472,30 @@ $ibero-border: #E5E2E0;
    ========================================================= */
 
 .main-content img {
-  border-radius: 6px;
+  display: block;
 
   max-width: 100%;
+
   height: auto;
+
+  border-radius: 7px;
+}
+
+
+/* =========================================================
+   PIES DE FIGURA
+   ========================================================= */
+
+.main-content img + em {
+  display: block;
+
+  margin-top: 0.5rem;
+
+  color: $ibero-gray;
+
+  font-size: 0.9rem;
+
+  text-align: center;
 }
 
 
@@ -323,22 +505,28 @@ $ibero-border: #E5E2E0;
 
 .main-content hr {
   border-color: #E8E5E3;
+
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 
 /* =========================================================
-   ANCLAS DE LOS ENCABEZADOS
+   ANCLAS DE ENCABEZADOS
    ========================================================= */
 
 /*
-   Oculta el icono de cadena mientras
-   el cursor no se encuentra sobre el título.
+   El icono de cadena permanece oculto
+   hasta pasar el cursor por el encabezado.
 */
 
 .anchor-heading {
   opacity: 0;
-  transition: opacity 0.2s ease;
+
+  transition:
+    opacity 0.2s ease;
 }
+
 
 h1:hover .anchor-heading,
 h2:hover .anchor-heading,
@@ -354,7 +542,7 @@ h4:hover .anchor-heading {
 
 ::selection {
   background-color:
-    rgba(224, 0, 52, 0.18);
+    rgba(238, 61, 66, 0.20);
 }
 
 
@@ -366,14 +554,18 @@ h4:hover .anchor-heading {
   width: 6px;
 }
 
+
 .site-nav::-webkit-scrollbar-track {
   background: transparent;
 }
 
+
 .site-nav::-webkit-scrollbar-thumb {
   background-color: #C9C3BF;
+
   border-radius: 10px;
 }
+
 
 .site-nav::-webkit-scrollbar-thumb:hover {
   background-color: $ibero-gray;
@@ -381,63 +573,146 @@ h4:hover .anchor-heading {
 
 
 /* =========================================================
-   AJUSTES PARA PANTALLAS PEQUEÑAS
+   BÚSQUEDA
+   ========================================================= */
+
+.search-input {
+  border-radius: 6px !important;
+}
+
+
+.search-input:focus {
+  border-color: $ibero-red !important;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(238, 61, 66, 0.12) !important;
+}
+
+
+/* =========================================================
+   BOTONES
+   ========================================================= */
+
+.btn-primary {
+  background-color: $ibero-red !important;
+
+  border-color: $ibero-red !important;
+}
+
+
+.btn-primary:hover {
+  background-color: $ibero-red-dark !important;
+
+  border-color: $ibero-red-dark !important;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.site-footer {
+  color: $ibero-gray;
+
+  font-size: 0.85rem;
+}
+
+
+/* =========================================================
+   AJUSTES PARA CELULAR
    ========================================================= */
 
 @media (max-width: 50rem) {
+
+  /*
+    Cabecera ligeramente más pequeña.
+  */
+
+  .site-header {
+    min-height: 80px;
+  }
+
+
+  /*
+    Logo.
+  */
+
+  .site-logo {
+    max-width: 130px !important;
+
+    max-height: 58px !important;
+  }
+
+
+  /*
+    Texto Portafolio.
+  */
+
+  .site-title::after {
+    font-size: 1.15rem;
+  }
+
+
+  /*
+    Título principal.
+  */
 
   .main-content h1 {
     font-size: 2.2rem;
   }
 
+
+  /*
+    Texto.
+  */
+
   .main-content {
     line-height: 1.6;
   }
+
+
+  /*
+    Tablas.
+  */
 
   .main-content table {
     font-size: 0.9rem;
   }
 }
 
+
 /* =========================================================
-   LOGO IBERO EN CABECERA
+   AJUSTES PARA CELULARES PEQUEÑOS
    ========================================================= */
 
-.site-title {
-  display: flex !important;
-  align-items: center;
-  gap: 0.7rem;
+@media (max-width: 30rem) {
 
-  color: #ffffff !important;
-  text-decoration: none !important;
-}
-
-/* Tamaño del logo */
-.site-logo {
-  max-height: 52px !important;
-  width: auto !important;
-  object-fit: contain;
-}
-
-/* Texto después del logo */
-.site-title::after {
-  content: "| Portafolio";
-
-  color: #ffffff;
-  font-size: 1.65rem;
-  font-weight: 700;
-
-  white-space: nowrap;
-}
-
-/* Ajuste para teléfono */
-@media (max-width: 50rem) {
+  /*
+    Logo un poco menor.
+  */
 
   .site-logo {
-    max-height: 40px !important;
+    max-width: 105px !important;
+
+    max-height: 50px !important;
   }
 
+
+  /*
+    Texto de Portafolio.
+  */
+
   .site-title::after {
-    font-size: 1.25rem;
+    font-size: 1rem;
+  }
+
+
+  /*
+    Título.
+  */
+
+  .main-content h1 {
+    font-size: 1.9rem;
   }
 }
