@@ -4,13 +4,14 @@ description: "Evaluación I - Control por RNA"
 theme: just-the-docs
 color_scheme: ibero
 
-logo: "/Evaluaci-n1_Control_Inteligente/assets/images/logo.png"
+logo: "/assets/images/logo.png"
 
 url: "https://vmolvera.github.io"
 baseurl: "/Evaluaci-n1_Control_Inteligente"
 
 search_enabled: true
 heading_anchors: true
+nav_enabled: true
 
 aux_links:
   "Repositorio en GitHub":
