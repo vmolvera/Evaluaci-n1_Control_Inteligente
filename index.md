@@ -36,7 +36,7 @@ Como evidencia del funcionamiento del sistema desarrollado, se realizó una prue
 
 En el video se observa la ejecución del controlador y el seguimiento de la trayectoria realizada por el robot durante la validación experimental.
 
-[▶ Ver video de la prueba experimental](PEGA_AQUI_EL_ENLACE){: .btn .btn-primary }
+**[▶ Ver video de la prueba experimental](TU_ENLACE)**
 
 ---
 
