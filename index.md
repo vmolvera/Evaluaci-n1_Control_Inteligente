@@ -30,6 +30,16 @@ El proyecto integra la adquisición experimental de información mediante el sis
 
 ---
 
+## Demostración experimental
+
+Como evidencia del funcionamiento del sistema desarrollado, se realizó una prueba física del **DJI RoboMaster S1** utilizando el controlador neuronal implementado.
+
+En el video se observa la ejecución del controlador y el seguimiento de la trayectoria realizada por el robot durante la validación experimental.
+
+[▶ Ver video de la prueba experimental](PEGA_AQUI_EL_ENLACE){: .btn .btn-primary }
+
+---
+
 ## Objetivos principales
 
 El desarrollo de la evaluación comprende tres etapas principales:
