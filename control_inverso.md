@@ -3,6 +3,7 @@ layout: default
 title: 6. Control Neuronal Inverso
 nav_order: 7
 permalink: /control-inverso/
+nav_exclude: true
 ---
 
 # Control Neuronal Inverso
