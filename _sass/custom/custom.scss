@@ -71,21 +71,21 @@ $ibero-text: #4A4543;
 .site-logo {
   display: block !important;
 
-  width: auto !important;
+  width: 185px !important;
+  height: 72px !important;
+  min-width: 185px !important;
 
-  max-width: 190px !important;
-  max-height: 78px !important;
+  flex: 0 0 185px !important;
 
-  object-fit: contain;
-
-  /*
-    El fondo del logo y de la cabecera usan
-    el mismo rojo #EE3D42 para que se integren.
-  */
+  background-repeat: no-repeat !important;
+  background-position: left center !important;
+  background-size: contain !important;
 }
 
 
-/* Texto adicional junto al logo */
+/* =========================================================
+   TEXTO "PORTAFOLIO" DESPUÉS DEL LOGO
+   ========================================================= */
 
 .site-title::after {
   content: "| Portafolio";
@@ -179,10 +179,6 @@ $ibero-text: #4A4543;
 
 @media (min-width: 66.5rem) {
 
-  /*
-    El menú queda fijo del lado izquierdo.
-  */
-
   .site-nav {
     display: block !important;
 
@@ -207,37 +203,27 @@ $ibero-text: #4A4543;
 
     background-color: $ibero-light !important;
 
-    border-right:
-      1px solid
-      $ibero-border;
+    border-right: 1px solid $ibero-border;
 
     z-index: 150;
   }
 
 
-  /*
-    Espacio para evitar que el contenido
-    quede debajo del menú.
-  */
+  /* Espacio para que el contenido no quede debajo del menú */
 
   .main {
     margin-left: 285px !important;
   }
 
 
-  /*
-    En escritorio no necesitamos
-    el botón hamburguesa.
-  */
+  /* En escritorio no se necesita el botón hamburguesa */
 
   #menu-button {
     display: none !important;
   }
 
 
-  /*
-    Separación entre opciones.
-  */
+  /* Separación entre elementos del menú */
 
   .nav-list {
     padding-top: 0.25rem;
@@ -262,11 +248,6 @@ $ibero-text: #4A4543;
 
 @media (max-width: 66.49rem) {
 
-  /*
-    El menú vuelve a funcionar
-    como desplegable.
-  */
-
   .site-nav {
     position: static !important;
 
@@ -274,9 +255,7 @@ $ibero-text: #4A4543;
   }
 
 
-  /*
-    Mostrar hamburguesa.
-  */
+  /* Mostrar botón hamburguesa */
 
   #menu-button {
     display: flex !important;
@@ -296,10 +275,7 @@ $ibero-text: #4A4543;
   }
 
 
-  /*
-    El contenido vuelve a ocupar
-    todo el ancho.
-  */
+  /* El contenido vuelve a ocupar todo el ancho */
 
   .main {
     margin-left: 0 !important;
@@ -340,9 +316,7 @@ $ibero-text: #4A4543;
 
   font-weight: 700;
 
-  border-bottom:
-    1px solid
-    #E8E5E3;
+  border-bottom: 1px solid #E8E5E3;
 
   padding-bottom: 0.35rem;
 
@@ -388,16 +362,14 @@ $ibero-text: #4A4543;
 .main-content a {
   color: $ibero-red;
 
-  text-decoration-color:
-    rgba(238, 61, 66, 0.35);
+  text-decoration-color: rgba(238, 61, 66, 0.35);
 }
 
 
 .main-content a:hover {
   color: $ibero-red-dark;
 
-  text-decoration-color:
-    $ibero-red-dark;
+  text-decoration-color: $ibero-red-dark;
 }
 
 
@@ -450,9 +422,7 @@ $ibero-text: #4A4543;
    ========================================================= */
 
 .main-content pre {
-  border:
-    1px solid
-    #DEDAD8;
+  border: 1px solid #DEDAD8;
 
   border-radius: 8px;
 
@@ -515,16 +485,10 @@ $ibero-text: #4A4543;
    ANCLAS DE ENCABEZADOS
    ========================================================= */
 
-/*
-   El icono de cadena permanece oculto
-   hasta pasar el cursor por el encabezado.
-*/
-
 .anchor-heading {
   opacity: 0;
 
-  transition:
-    opacity 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 
@@ -541,8 +505,7 @@ h4:hover .anchor-heading {
    ========================================================= */
 
 ::selection {
-  background-color:
-    rgba(238, 61, 66, 0.20);
+  background-color: rgba(238, 61, 66, 0.20);
 }
 
 
@@ -625,56 +588,50 @@ h4:hover .anchor-heading {
 
 @media (max-width: 50rem) {
 
-  /*
-    Cabecera ligeramente más pequeña.
-  */
+  /* Cabecera */
 
   .site-header {
     min-height: 80px;
   }
 
 
-  /*
-    Logo.
-  */
+  /* Logo */
 
   .site-logo {
-    max-width: 130px !important;
+    width: 130px !important;
+    height: 51px !important;
+    min-width: 130px !important;
 
-    max-height: 58px !important;
+    flex: 0 0 130px !important;
+
+    background-repeat: no-repeat !important;
+    background-position: left center !important;
+    background-size: contain !important;
   }
 
 
-  /*
-    Texto Portafolio.
-  */
+  /* Texto Portafolio */
 
   .site-title::after {
     font-size: 1.15rem;
   }
 
 
-  /*
-    Título principal.
-  */
+  /* Título principal */
 
   .main-content h1 {
     font-size: 2.2rem;
   }
 
 
-  /*
-    Texto.
-  */
+  /* Texto */
 
   .main-content {
     line-height: 1.6;
   }
 
 
-  /*
-    Tablas.
-  */
+  /* Tablas */
 
   .main-content table {
     font-size: 0.9rem;
@@ -688,29 +645,29 @@ h4:hover .anchor-heading {
 
 @media (max-width: 30rem) {
 
-  /*
-    Logo un poco menor.
-  */
+  /* Logo */
 
   .site-logo {
-    max-width: 105px !important;
+    width: 105px !important;
+    height: 41px !important;
+    min-width: 105px !important;
 
-    max-height: 50px !important;
+    flex: 0 0 105px !important;
+
+    background-repeat: no-repeat !important;
+    background-position: left center !important;
+    background-size: contain !important;
   }
 
 
-  /*
-    Texto de Portafolio.
-  */
+  /* Texto Portafolio */
 
   .site-title::after {
     font-size: 1rem;
   }
 
 
-  /*
-    Título.
-  */
+  /* Título principal */
 
   .main-content h1 {
     font-size: 1.9rem;
