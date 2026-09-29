@@ -3,6 +3,7 @@ layout: default
 title: 10. Evidencias
 nav_order: 11
 permalink: /evidencias/
+nav_exclude: true
 ---
 
 # Evidencias
