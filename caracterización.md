@@ -3,6 +3,7 @@ layout: default
 title: 5. Caracterización neuronal
 nav_order: 6
 permalink: /caracterizacion/
+nav_exclude: true
 ---
 
 # Caracterización Neuronal
