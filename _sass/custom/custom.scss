@@ -673,3 +673,37 @@ h4:hover .anchor-heading {
     font-size: 1.9rem;
   }
 }
+
+
+/* =========================================================
+   LOGO IBERO - INSERCIÓN DIRECTA EN CABECERA
+   ========================================================= */
+
+.ibero-header-logo {
+  display: block !important;
+
+  width: 185px !important;
+  height: auto !important;
+
+  max-height: 72px !important;
+
+  object-fit: contain;
+
+  flex-shrink: 0;
+}
+
+/* Tablet y celular */
+@media (max-width: 50rem) {
+  .ibero-header-logo {
+    width: 130px !important;
+    max-height: 52px !important;
+  }
+}
+
+/* Celulares pequeños */
+@media (max-width: 30rem) {
+  .ibero-header-logo {
+    width: 105px !important;
+    max-height: 44px !important;
+  }
+}
