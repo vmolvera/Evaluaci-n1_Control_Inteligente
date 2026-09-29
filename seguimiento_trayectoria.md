@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 8. Seguimiento de Trayectoria
+title: 7. Seguimiento de Trayectoria
 nav_order: 9
 permalink: /seguimiento-trayectoria/
 ---
