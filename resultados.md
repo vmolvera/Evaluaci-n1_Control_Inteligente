@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 9. Resultados Experimentales
+title: 8. Resultados Experimentales
 nav_order: 10
 permalink: /resultados/
 ---
