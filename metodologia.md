@@ -125,7 +125,11 @@ El procedimiento general incluyó:
 4. Cálculo de derivadas;
 5. Remuestreo a una frecuencia común.
 
-Para suavizar las mediciones y facilitar el cálculo de sus derivadas se utilizó un filtro **Savitzky-Golay**.
+Se realizó una etapa de eliminación de datos atípicos o **despike**, utilizando como límites principales ($$v_{umbral}=1.0\;m/s$$) para cambios asociados al movimiento lineal y ($$\omega_{umbral}=150\;^\circ/s$$) para cambios asociados a la orientación.
+
+Posteriormente se aplicó un filtro **Savitzky-Golay** utilizando una ventana de ($$N=31$$) muestras y un polinomio de orden ($$p=3$$).
+
+Este procedimiento permitió reducir el ruido experimental antes de calcular las derivadas de posición y orientación.
 
 A partir de las posiciones medidas se calcularon las velocidades globales:
 
