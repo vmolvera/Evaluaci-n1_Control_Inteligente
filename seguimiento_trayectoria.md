@@ -1,15 +1,15 @@
 ---
 layout: default
-title: 7. Seguimiento de Trayectoria
-nav_order: 9
+title: 6. Seguimiento de Trayectoria
+nav_order: 7
 permalink: /seguimiento-trayectoria/
 ---
 
 # Seguimiento de Trayectoria
 
-Después de implementar el control de posición, se extendió la estrategia para realizar el seguimiento de una referencia cartesiana variante en el tiempo.
+Después de implementar el control de posición y orientación, la estrategia se extendió para realizar el seguimiento de una **referencia cartesiana variante en el tiempo**.
 
-En esta etapa el objetivo ya no consiste únicamente en alcanzar un punto fijo, sino en actualizar continuamente la referencia y calcular los pulsos necesarios para que el DJI RoboMaster S1 siga una trayectoria predefinida.
+En esta etapa, el objetivo ya no consiste únicamente en alcanzar un punto fijo, sino en actualizar continuamente la referencia y calcular los pulsos necesarios para que el **DJI RoboMaster S1** siga una trayectoria predefinida.
 
 La estrategia general puede representarse como:
 
@@ -18,123 +18,157 @@ Trayectoria deseada
         ↓
 Referencia instantánea
         ↓
-Posición actual
+Estado actual del robot
         ↓
 Cálculo del error
         ↓
+Transformación al marco del robot
+        ↓
 RNA inversa
         ↓
-ux, uy, uz
+Pulsos ux, uy, uz
         ↓
 DJI RoboMaster S1
         ↓
-Nueva posición
-        │
-        └──────────── Realimentación
+Nuevo estado
 ```
 
 ---
 
-## 8.1 Trayectoria circular
+## 6.1 Trayectoria circular
 
-Para evaluar el desempeño del controlador se utilizó una trayectoria circular.
+Para evaluar el desempeño del controlador se utilizó una **trayectoria circular predefinida**.
 
 La referencia implementada fue:
 
 $$
-x(t)=0.15+0.30\sin(0.8t)
-$$
-
-$$
-y(t)=-0.20+0.30\cos(0.8t)
-$$
-
-donde:
-
-- ($0.15$ m) corresponde al centro del círculo en el eje $x$.
-- ($-0.20$ m) corresponde al centro del círculo en el eje $y$.
-- ($0.30$ m) corresponde al radio.
-- ($0.8$ rad/s) corresponde a la frecuencia angular utilizada durante la prueba.
-
-La trayectoria tiene por lo tanto un radio de:
-
-$$
-R=0.30\;m
-$$
-
-y se ejecutaron:
-
-$$
-2
-$$
-
-vueltas completas.
-
----
-
-## 8.2 Velocidad tangencial de referencia
-
-La velocidad tangencial de una trayectoria circular puede calcularse mediante:
-
-$$
-v=R\omega
-$$
-
-Sustituyendo los valores utilizados:
-
-$$
-v=(0.30)(0.8)
-$$
-
-$$
-v=0.24\;m/s
-$$
-
-Este valor se mantiene dentro del límite lineal establecido para el controlador:
-
-$$
-v_{max}=0.35\;m/s
-$$
-
-Por esta razón, la referencia puede ejecutarse sin solicitar al robot una velocidad superior al rango definido para la operación.
-
----
-
-## 8.3 Generación temporal de la referencia
-
-La trayectoria se genera a partir del tiempo transcurrido desde el inicio de la ejecución.
-
-Para cada instante $t$ se calcula:
-
-$$
 x_r(t)
+=
+0.15
++
+0.30\sin(0.80t)
 $$
 
 $$
 y_r(t)
+=
+-0.20
++
+0.30\cos(0.80t)
 $$
 
-correspondientes a la posición deseada.
-
-El controlador compara estos valores con la posición actual:
+donde el centro de la trayectoria está definido por:
 
 $$
-x(t)
+c_x=0.15\;m
 $$
 
 $$
-y(t)
+c_y=-0.20\;m
 $$
 
-del RoboMaster.
+y el radio corresponde a ($$R=0.30\;m$$).
 
-De esta manera, la referencia cambia continuamente durante toda la ejecución.
+La velocidad angular utilizada para recorrer la trayectoria fue ($$\omega=0.80\;rad/s$$)
+
+Por lo tanto, la magnitud aproximada de la velocidad tangencial de referencia es:
+
+$$
+v_t=R\omega
+$$
+
+$$
+v_t=(0.30)(0.80)
+$$
+
+$$
+\boxed{v_t=0.24\;m/s}
+$$
 
 ---
 
-## 8.4 Error de seguimiento
+## 6.2 Generación de la referencia
 
-El error instantáneo de posición se calcula mediante:
+La posición deseada se actualiza continuamente a partir del tiempo de ejecución.
+
+Para cada instante \(t\), el controlador genera una nueva referencia:
+
+$$
+\mathbf{P}_r(t)=
+\begin{bmatrix}
+x_r(t)\\
+y_r(t)
+\end{bmatrix}
+$$
+
+De esta manera, en lugar de utilizar una única posición objetivo, el RoboMaster recibe una secuencia continua de puntos pertenecientes a la circunferencia.
+
+De manera conceptual:
+
+```text
+Tiempo t
+   ↓
+Ecuaciones de la trayectoria
+   ↓
+xr(t), yr(t)
+   ↓
+Referencia instantánea
+   ↓
+Controlador
+```
+
+En \($t=0\$), la referencia inicial corresponde a:
+
+$$
+x_r(0)=0.15\;m
+$$
+
+$$
+y_r(0)=0.10\;m
+$$
+
+Este punto es utilizado como referencia inicial antes de comenzar formalmente el seguimiento.
+
+---
+
+## 6.3 Posicionamiento inicial
+
+Antes de recorrer la trayectoria circular, el RoboMaster debe encontrarse suficientemente cerca del punto inicial.
+
+Para ello se utiliza el estado:
+
+```text
+INICIO
+```
+
+descrito previamente en la sección de control de posición y orientación.
+
+La lógica general es:
+
+```text
+Robot detenido
+      ↓
+Estado INICIO
+      ↓
+Movimiento hacia el punto inicial
+      ↓
+Error de posición < tolerancia
+      ↓
+Inicio del seguimiento circular
+```
+
+La tolerancia utilizada para considerar alcanzado el punto inicial fue ($$e_p<0.03\;m
+$$), equivalente aproximadamente a ($$3\;cm$$).
+
+También se establece un tiempo máximo de posicionamiento de($$T_{ini,max}=15\;s$$).
+
+---
+
+## 6.4 Error respecto a la trayectoria
+
+Durante el seguimiento, en cada instante se compara la referencia con la posición actual del robot.
+
+Los errores cartesianos se calculan mediante:
 
 $$
 e_x(t)=x_r(t)-x(t)
@@ -144,224 +178,157 @@ $$
 e_y(t)=y_r(t)-y(t)
 $$
 
-La magnitud del error cartesiano se obtiene mediante:
+La magnitud del error de posición se determina mediante:
 
 $$
-e_p(t)=
+e_p(t)
+=
 \sqrt{
 e_x^2(t)+e_y^2(t)
 }
 $$
 
-Este valor permite cuantificar qué tan lejos se encuentra el robot de la referencia circular en cada instante.
+Este valor representa la distancia instantánea entre el punto deseado de la trayectoria y la posición actual del RoboMaster.
 
 ---
 
-## 8.5 Horizonte de control
+## 6.5 Transformación al marco del robot
 
-La RNA inversa fue entrenada utilizando un horizonte:
+El error de posición se encuentra inicialmente expresado en coordenadas globales.
 
-$$
-T_h=0.50\;s
-$$
+Sin embargo, la RNA inversa trabaja con desplazamientos expresados respecto al sistema de referencia asociado al chasis.
 
-Por esta razón, durante el seguimiento de la trayectoria se utiliza una referencia futura correspondiente a dicho horizonte.
-
-Para un instante actual $t$, se analiza también la referencia en:
+Por esta razón, los errores se transforman mediante:
 
 $$
-t+T_h
-$$
-
-De esta forma se obtiene el desplazamiento que debería realizar el robot durante los siguientes $0.50$ segundos.
-
----
-
-## 8.6 Componente de anticipación
-
-Durante el seguimiento se utiliza una componente de anticipación o **feedforward** basada en el cambio futuro de la referencia.
-
-De manera general:
-
-$$
-\Delta x_{ff}
+e_{xb}
 =
-x_r(t+T_h)-x_r(t)
+e_x\cos(\psi)
++
+e_y\sin(\psi)
 $$
 
 $$
-\Delta y_{ff}
+e_{yb}
 =
-y_r(t+T_h)-y_r(t)
-$$
-
-Esta componente permite que el controlador no dependa únicamente del error actual, sino que también considere hacia dónde se desplazará la referencia.
-
----
-
-## 8.7 Corrección mediante el error
-
-Además de la componente de anticipación, se incorpora una corrección proporcional basada en la diferencia entre la trayectoria deseada y la posición actual.
-
-Para el eje ($x$):
-
-$$
-\Delta x=
-K_{ff}
-[
-x_r(t+T_h)-x_r(t)
-]
+-e_x\sin(\psi)
 +
-K_p
-[
-x_r(t)-x(t)
-]
+e_y\cos(\psi)
 $$
 
-y para el eje ($y$):
-
-$$
-\Delta y=
-K_{ff}
-[
-y_r(t+T_h)-y_r(t)
-]
-+
-K_p
-[
-y_r(t)-y(t)
-]
-$$
-
-En la implementación final se utilizaron inicialmente:
-
-$$
-K_{ff}=1
-$$
-
-$$
-K_p=1
-$$
-
-La primera componente permite anticipar el movimiento de la trayectoria y la segunda corrige el error acumulado.
+De esta forma, el controlador determina cuánto debe desplazarse el robot longitudinal y lateralmente desde su propia orientación.
 
 ---
 
-## 8.8 Transformación al marco del RoboMaster
+## 6.6 Generación del movimiento requerido
 
-El desplazamiento calculado se encuentra inicialmente expresado en coordenadas globales.
+A partir del error transformado se construye el desplazamiento solicitado a la RNA inversa.
 
-Antes de utilizarlo como entrada de la RNA se transforma al sistema de referencia del robot:
+Para las componentes de posición:
 
 $$
-\Delta x_b=
-\Delta x\cos(\psi)+
-\Delta y\sin(\psi)
+\Delta x_b=K_p e_{xb}
 $$
 
 $$
-\Delta y_b=
--\Delta x\sin(\psi)+
-\Delta y\cos(\psi)
+\Delta y_b=K_p e_{yb}
 $$
 
-Para la orientación se utiliza también una corrección angular basada en el yaw actual.
+utilizando:
+
+$$
+K_p=1.0
+$$
+
+La orientación se maneja mediante el error angular:
+
+$$
+e_\psi=
+\psi_r-\psi
+$$
+
+con una ganancia:
+
+$$
+K_\psi=1.0
+$$
+
+Por lo tanto, el movimiento requerido puede expresarse como:
+
+$$
+\mathbf{d}(k)=
+\begin{bmatrix}
+\Delta x_b\\
+\Delta y_b\\
+\Delta\psi
+\end{bmatrix}
+$$
+
+Este vector constituye una parte de la entrada de la RNA inversa.
 
 ---
 
-## 8.9 Entrada del controlador neuronal
+## 6.7 Uso de la RNA inversa
 
-En cada iteración se construye el vector:
+La RNA inversa utiliza el movimiento requerido junto con el historial dinámico reciente del robot.
+
+La entrada es:
 
 $$
-X_{RNA}=
 [
 \Delta x_b,
 \Delta y_b,
 \Delta\psi,
-V(k),
-V(k-1),
-V(k-2)
+\mathbf{v}(k),
+\mathbf{v}(k-1),
+\mathbf{v}(k-2)
 ]
 $$
 
-La RNA inversa calcula entonces:
+donde:
 
 $$
+\mathbf{v}(k)=
 [
-u_x,
-u_y,
-u_z
+v_{bx}(k),
+v_{by}(k),
+\omega_z(k)
 ]
 $$
 
-Estos pulsos son posteriormente saturados y enviados al RoboMaster.
+La arquitectura utilizada corresponde a:
 
----
+$$
+\boxed{12-16-12-3}
+$$
 
-## 8.10 Secuencia de ejecución
+y genera los comandos ($$u_x, u_y, u_z$$).
 
-La lógica completa del controlador puede representarse mediante los siguientes estados:
+De manera conceptual:
 
 ```text
-IDLE
-  ↓
-INICIO
-  ↓
-CIRCULO
-  ↓
-IDLE
+Referencia circular
+        ↓
+Error respecto al robot
+        ↓
+Transformación mundo → robot
+        ↓
+Δxb, Δyb, Δψ
+        +
+Historial dinámico
+        ↓
+RNA inversa
+        ↓
+Pulsos ux, uy, uz
 ```
 
-### Estado IDLE
-
-El robot permanece detenido:
-
-$$
-u_x=u_y=u_z=0
-$$
-
-### Estado INICIO
-
-El RoboMaster se desplaza hacia el primer punto de la trayectoria.
-
-### Estado CIRCULO
-
-La referencia se actualiza en función del tiempo y la RNA calcula continuamente los pulsos necesarios para seguir la trayectoria.
-
-### Fin
-
-Después de completar las vueltas establecidas, los pulsos se llevan nuevamente a cero.
-
 ---
 
-## 8.11 Frecuencia de operación
+## 6.8 Saturación de los pulsos
 
-El controlador actualiza internamente la referencia y las variables de control a:
+Los pulsos generados por la RNA se limitan antes de enviarse al RoboMaster.
 
-$$
-f_{control}=100\;Hz
-$$
-
-correspondiente a:
-
-$$
-T_{control}=0.01\;s
-$$
-
-Los comandos calculados son enviados físicamente al RoboMaster a:
-
-$$
-f_{cmd}=20\;Hz
-$$
-
-Esta separación permite mantener un cálculo rápido de la referencia y limitar la frecuencia de comunicación con el robot.
-
----
-
-## 8.12 Saturación durante el seguimiento
-
-Antes de enviar la salida de la RNA al robot se aplican restricciones:
+Para el movimiento lineal se utiliza:
 
 $$
 |u_x|\leq0.35\;m/s
@@ -371,124 +338,167 @@ $$
 |u_y|\leq0.35\;m/s
 $$
 
+mientras que para el movimiento angular:
+
 $$
 |u_z|\leq40^\circ/s
 $$
 
-También se limita la variación máxima entre pulsos consecutivos para reducir movimientos abruptos.
+También se limita la aceleración lineal a:
+
+$$
+a_{max}=0.40\;m/s^2
+$$
+
+y la aceleración angular a:
+
+$$
+\alpha_{max}=90^\circ/s^2
+$$
+
+Estas restricciones reducen cambios abruptos y evitan solicitar movimientos excesivos al sistema físico.
 
 ---
 
-## 8.13 Registro de la ejecución
+## 6.9 Frecuencia de ejecución
 
-Durante la prueba se almacenan variables correspondientes a:
+El sistema realiza el cálculo interno del controlador aproximadamente a:
 
-- Tiempo.
-- Estado del controlador.
-- $u_x$.
-- $u_y$.
-- $u_z$.
-- $\Delta x_b$.
-- $\Delta y_b$.
-- $\Delta\psi$.
-- Posición $x$.
-- Posición $y$.
-- Yaw.
-- Referencia $x_r$.
-- Referencia $y_r$.
-- Error de posición.
-- $v_{bx}$.
-- $v_{by}$.
-- $\omega_z$.
+$$
+f_{control}=100\;Hz
+$$
 
-Estos datos permiten realizar posteriormente una evaluación cuantitativa del desempeño del controlador.
+equivalente a un periodo de:
+
+$$
+T_s=0.01\;s
+$$
+
+Los pulsos se transmiten al RoboMaster aproximadamente a:
+
+$$
+f_{envio}=20\;Hz
+$$
+
+Por lo tanto, la referencia, el error y el estado interno del controlador pueden actualizarse con mayor frecuencia que el envío de nuevos pulsos al chasis.
 
 ---
 
-## 8.14 Métrica RMSE
+## 6.10 Número de vueltas
 
-Para evaluar globalmente el error de seguimiento se utiliza el Error Cuadrático Medio de posición (RMSE).
+La prueba experimental se configuró para recorrer($$N=2$$) vueltas completas.
+
+Para una velocidad angular de referencia de ($$\omega=0.80\;rad/s$$).
+
+El periodo aproximado de una vuelta es:
+
+$$
+T=
+\frac{2\pi}{\omega}
+$$
+
+$$
+T=
+\frac{2\pi}{0.80}
+$$
+
+$$
+T\approx7.85\;s
+$$
+
+Por lo tanto, el tiempo nominal asociado a dos vueltas es aproximadamente:
+
+$$
+T_{2vueltas}\approx15.7\;s
+$$
+
+sin considerar el tiempo utilizado durante el posicionamiento inicial.
+
+---
+
+## 6.11 Realimentación durante el seguimiento
+
+El seguimiento de trayectoria se realiza mediante una estrategia realimentada.
+
+Después de enviar cada conjunto de pulsos se obtiene nuevamente el estado del RoboMaster y se recalcula el error respecto al nuevo punto de referencia.
+
+El proceso completo puede representarse mediante:
+
+```text
+Trayectoria circular
+        ↓
+Referencia actual
+        ↓
+Error
+        ↓
+RNA inversa
+        ↓
+Pulsos
+        ↓
+RoboMaster
+        ↓
+Nuevo estado
+        │
+        └─────────────┐
+                      ↓
+             Nueva referencia
+                      ↓
+                 Nuevo error
+```
+
+Esta actualización continua permite que el controlador corrija desviaciones mientras el robot recorre la trayectoria.
+
+---
+
+## 6.12 Registro de la prueba
+
+Durante la ejecución se almacenan las variables necesarias para analizar posteriormente el comportamiento del controlador.
+
+Entre las señales de interés se encuentran:
+
+- Trayectoria de referencia;
+- Posición estimada mediante la odometría del RoboMaster;
+- Orientación del robot;
+- Pomandos \($u_x\$), \($u_y\$) y \($u_z\$);
+- Error de posición;
+- Información temporal de la prueba.
+
+Adicionalmente, durante la validación experimental se utiliza **VICON** para obtener una medición externa de la trayectoria realmente ejecutada.
+
+Esto permite realizar posteriormente una comparación entre:
+
+```text
+Referencia
+    ↓
+Odometría del RoboMaster
+    ↓
+Medición VICON
+```
+
+---
+
+## 6.13 Evaluación del seguimiento
+
+El desempeño de la trayectoria se analiza comparando la referencia con el movimiento ejecutado.
+
+Una de las métricas utilizadas es la **raíz del error cuadrático medio de posición (RMSE)**:
 
 $$
 RMSE=
 \sqrt{
 \frac{1}{N}
 \sum_{k=1}^{N}
-e_p^2(k)
+\left[
+(x_r(k)-x(k))^2+
+(y_r(k)-y(k))^2
+\right]
 }
 $$
 
-donde:
+También se analiza el error máximo registrado durante la prueba.
 
-- ($N$) corresponde al número total de muestras.
-- ($e_p(k)$) corresponde al error cartesiano de posición.
+Estas métricas permiten cuantificar el desempeño del controlador durante el recorrido completo.
 
-Durante la prueba experimental mostrada se obtuvo aproximadamente:
+Los valores experimentales obtenidos se presentan en la sección **7. Resultados Experimentales**.
 
-$$
-RMSE \approx 5.6\;cm
-$$
-
-El error máximo observado fue aproximadamente:
-
-$$
-e_{max}\approx14.3\;cm
-$$
-
----
-
-## 8.15 Resultado experimental
-
-La trayectoria ejecutada por el RoboMaster mantuvo la geometría general del círculo de referencia.
-
-La comparación experimental puede interpretarse como:
-
-```text
-Trayectoria de referencia
-        ↓
-   Círculo ideal
-
-Trayectoria del robot
-        ↓
-Círculo aproximado con
-errores dinámicos
-```
-
-Las principales diferencias entre ambas trayectorias pueden estar asociadas con:
-
-- Dinámica física del robot.
-- Deslizamiento de las ruedas Mecanum.
-- Saturación de los pulsos.
-- Retardos de comunicación.
-- Errores de medición.
-- Diferencias entre odometría y medición externa.
-
-A pesar de estas desviaciones, el controlador permitió realizar el seguimiento completo de la referencia circular.
-
----
-
-## 8.16 Resultado de la etapa
-
-La implementación permitió demostrar que la RNA inversa puede utilizarse para generar en tiempo real los pulsos necesarios para seguir una referencia variante en el tiempo.
-
-El procedimiento completo puede resumirse como:
-
-```text
-Círculo paramétrico
-        ↓
-Referencia instantánea
-        ↓
-Error de posición
-        +
-Referencia futura
-        ↓
-Transformación de coordenadas
-        ↓
-RNA inversa
-        ↓
-ux, uy, uz
-        ↓
-DJI RoboMaster S1
-        ↓
-Seguimiento de trayectoria
-```
+La evaluación final del seguimiento se realiza comparando la referencia, la odometría del RoboMaster y las mediciones externas obtenidas mediante **VICON**.
