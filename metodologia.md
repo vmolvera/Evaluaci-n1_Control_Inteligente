@@ -7,36 +7,34 @@ permalink: /metodologia/
 
 # Metodología
 
-El desarrollo del proyecto se realizó mediante una metodología dividida en diferentes etapas, desde la adquisición de información del sistema físico hasta la implementación y validación del controlador neuronal.
+El desarrollo del proyecto se realizó mediante una metodología experimental dividida en diferentes etapas, desde la adquisición de información del sistema físico hasta la implementación y validación del controlador neuronal.
 
-El proceso general utilizado fue:
+La metodología completa puede resumirse mediante la siguiente secuencia:
 
 ```text
-Configuración del RoboMaster S1
+Configuración del DJI RoboMaster S1
         ↓
 Configuración del sistema VICON
         ↓
 Generación de movimientos de excitación
         ↓
-Registro de comandos enviados al robot
+Registro de pulsos y movimiento
         ↓
-Adquisición de posición y orientación con VICON
-        ↓
-Procesamiento y limpieza de datos
+Procesamiento de las mediciones
         ↓
 Sincronización temporal
         ↓
 Construcción del conjunto de datos
         ↓
-Caracterización neuronal
+Modelos neuronales
+   ├── Modelo directo
+   └── Modelo inverso
         ↓
-Entrenamiento del modelo inverso
-        ↓
-Control de posición
+Control de posición y orientación
         ↓
 Seguimiento de trayectoria
         ↓
-Validación experimental
+Validación experimental mediante VICON
 ```
 
 ---
@@ -47,17 +45,19 @@ La plataforma principal utilizada fue el **DJI RoboMaster S1**, un robot móvil 
 
 Esta configuración permite realizar tres movimientos principales:
 
-- Desplazamiento longitudinal.
-- Desplazamiento lateral.
+- Desplazamiento longitudinal;
+- Desplazamiento lateral;
 - Rotación alrededor del eje vertical.
 
-Para registrar de manera externa el movimiento del robot se utilizó el sistema de captura de movimiento **VICON**, disponible en el Laboratorio de Análisis de Movimiento (LAM.
+Para registrar externamente el movimiento del robot se utilizó el sistema de captura de movimiento **VICON**, disponible en el Laboratorio de Análisis de Movimiento (LAM).
 
 VICON permitió obtener información experimental correspondiente a:
 
-- Posición en el eje \(x\).
-- Posición en el eje \(y\).
-- Orientación del robot.
+- posición en el eje \($x\$);
+- posición en el eje \($y\$);
+- orientación \($\psi\$) del robot.
+
+De esta manera fue posible disponer de una medición externa de la trayectoria ejecutada por el RoboMaster.
 
 ---
 
@@ -65,116 +65,360 @@ VICON permitió obtener información experimental correspondiente a:
 
 La comunicación con el RoboMaster se realizó mediante una conexión inalámbrica utilizando la red generada por el propio robot.
 
-La dirección utilizada para establecer comunicación fue:
+El sistema desarrollado establece comunicación con el chasis para enviar pulsos de movimiento y obtener información correspondiente al estado del robot.
 
-```text
-192.168.2.1
-```
-
-El sistema desarrollado establece comunicación directa con el chasis para enviar comandos de movimiento y obtener información de estado.
-
-Se utilizaron dos canales principales:
+En la implementación utilizada se trabajó con los siguientes canales de comunicación:
 
 | Función | Protocolo | Puerto |
 |---|---|---:|
-| Envío de comandos | TCP | 40923 |
+| Envío de pulsos | TCP | 40923 |
 | Recepción de telemetría | UDP | 40924 |
 
-Al establecer la comunicación se activa el modo de control del robot y posteriormente se solicitan datos de posición y orientación.
+Una vez establecida la comunicación, el programa puede enviar pulsos de movimiento y registrar la información requerida durante las pruebas experimentales.
 
 ---
 
-## 3.3 Adquisición de datos
+## 3.3 Adquisición de datos experimentales
 
-Para caracterizar experimentalmente el comportamiento del RoboMaster fue necesario registrar dos fuentes de información diferentes.
+Para caracterizar el comportamiento del RoboMaster fue necesario registrar simultáneamente dos fuentes principales de información.
 
-### Datos del sistema VICON
+### Mediciones mediante VICON
 
-VICON permitió registrar la evolución temporal de:
+El sistema VICON permitió registrar la evolución temporal de:
 
-- Posición \(x\).
-- Posición \(y\).
-- Orientación.
+- Posición \($x\$);
+- Posición \($y\$);
+- Orientación \($\psi\$).
 
-### Comandos enviados al RoboMaster
+### Pulsos enviados al RoboMaster
 
-De manera simultánea se almacenaron los comandos enviados al chasis:
+De manera simultánea se almacenaron los pulsos enviados al chasis:
 
 $$
-u_x , u_y , u_z
+\mathbf{u}(k)=
+\begin{bmatrix}
+u_x(k) \\
+u_y(k) \\
+u_z(k)
+\end{bmatrix}
 $$
 
 donde:
 
-- ($$u_x$$): comando de velocidad longitudinal.
-- ($$u_y$$): comando de velocidad lateral.
-- ($$u_z$$): comando de velocidad angular.
+- \($u_x\$) Pulso de velocidad longitudinal;
+- \($u_y\$) Pulso de velocidad lateral;
+- \($u_z\$) Pulso de velocidad angular.
 
-El objetivo fue obtener pares de datos entrada-salida que permitieran posteriormente entrenar las Redes Neuronales Artificiales.
-
----
-
-## 3.4 Problema de sincronización
-
-Los datos provenientes de VICON y los comandos enviados al robot fueron adquiridos con frecuencias de muestreo diferentes.
-
-Por esta razón no era posible utilizar directamente ambas señales para entrenar la red neuronal.
-
-Fue necesario implementar un procedimiento de:
-
-1. Limpieza de datos.
-2. Interpolación.
-3. Filtrado.
-4. Remuestreo.
-5. Estimación del retardo.
-6. Alineación temporal.
-
-Finalmente, ambas fuentes de información fueron llevadas a una frecuencia común de trabajo de:
-
-$$
-f_s = 100\;Hz
-$$
+El registro simultáneo de los pulsos y del movimiento observado permitió construir pares de datos adecuados para el desarrollo de los modelos neuronales.
 
 ---
 
-## 3.5 Procesamiento de las mediciones
+## 3.4 Procesamiento de las mediciones
 
-Antes de calcular las velocidades del robot se realizó una etapa de limpieza destinada a eliminar datos atípicos presentes en las mediciones experimentales.
+Antes de utilizar los datos experimentales se realizó una etapa de procesamiento destinada a reducir ruido, eliminar valores atípicos y calcular las variables dinámicas necesarias.
 
-Posteriormente se utilizó un filtro **Savitzky-Golay** para suavizar las señales y obtener sus derivadas.
+El procedimiento general incluyó:
+
+1. Identificación de datos atípicos;
+2. Corrección de muestras inconsistentes;
+3. Filtrado de las señales;
+4. Cálculo de derivadas;
+5. Remuestreo a una frecuencia común.
+
+Para suavizar las mediciones y facilitar el cálculo de sus derivadas se utilizó un filtro **Savitzky-Golay**.
 
 A partir de las posiciones medidas se calcularon las velocidades globales:
 
 $$
-v_x = \frac{dx}{dt}
+v_x=\frac{dx}{dt}
 $$
 
 $$
-v_y = \frac{dy}{dt}
+v_y=\frac{dy}{dt}
 $$
 
 y la velocidad angular:
 
 $$
-\omega_z = \frac{d\psi}{dt}
+\omega_z=\frac{d\psi}{dt}
 $$
+
+Estas variables describen el movimiento observado experimentalmente.
 
 ---
 
-## 3.6 Transformación al sistema de referencia del robot
+## 3.5 Transformación al sistema de referencia del robot
 
-Las mediciones de VICON se encuentran expresadas respecto a un sistema de referencia global, mientras que los comandos de movimiento del RoboMaster se interpretan respecto al sistema de referencia del propio chasis.
+Las mediciones proporcionadas por VICON se encuentran expresadas respecto a un sistema de referencia global, mientras que los pulsos del RoboMaster se interpretan respecto al sistema de referencia asociado al propio chasis.
 
-Por esta razón fue necesario transformar las velocidades globales al sistema de coordenadas del robot.
+Por esta razón fue necesario transformar las velocidades globales al marco del robot.
 
-Las velocidades en el marco del robot se calcularon mediante:
-
-$$
-v_{bx}=v_x\cos(\psi)+v_y\sin(\psi)
-$$
+Las velocidades se calcularon mediante:
 
 $$
-v_{by}=-v_x\sin(\psi)+v_y\cos(\psi)
+v_{bx}
+=
+v_x\cos(\psi)
++
+v_y\sin(\psi)
 $$
 
-Esta transformación permitió relacionar correctamente la señal obtenida de nuestra red neuronal con el movimiento realmente ejecutado por el RoboMaster.
+$$
+v_{by}
+=
+-v_x\sin(\psi)
++
+v_y\cos(\psi)
+$$
+
+De esta forma se obtiene el vector dinámico:
+
+$$
+\mathbf{v}(k)=
+\begin{bmatrix}
+v_{bx}(k) \\
+v_{by}(k) \\
+\omega_z(k)
+\end{bmatrix}
+$$
+
+Esta transformación permite relacionar correctamente los pulsos aplicados con el movimiento medido experimentalmente.
+
+---
+
+## 3.6 Sincronización temporal
+
+Los datos de VICON y los pulsos enviados al RoboMaster no fueron registrados originalmente con la misma frecuencia ni necesariamente con el mismo origen temporal.
+
+Por esta razón no era posible utilizar ambas señales directamente para el entrenamiento.
+
+El procedimiento de sincronización incluyó:
+
+1. Interpolación de las señales;
+2. Remuestreo;
+3. Estimación del retardo temporal;
+4. Desplazamiento de las señales;
+5. Análisis de correlación.
+
+Finalmente, ambas fuentes de información fueron llevadas a una frecuencia común de $$f_s=100\;Hz$$
+
+La correcta alineación temporal fue verificada mediante la correlación entre los pulsos aplicados y las correspondientes velocidades medidas.
+
+De manera general se analizaron las relaciones:
+
+$$
+u_x \leftrightarrow v_{bx}
+$$
+
+$$
+u_y \leftrightarrow v_{by}
+$$
+
+$$
+u_z \leftrightarrow \omega_z
+$$
+
+La sincronización permitió construir un conjunto de datos coherente para el entrenamiento de las Redes Neuronales Artificiales.
+
+---
+
+## 3.7 Desarrollo del modelo neuronal directo
+
+Una vez procesadas y sincronizadas las señales, se desarrolló un **modelo neuronal directo** con el objetivo de caracterizar el comportamiento dinámico del RoboMaster.
+
+El modelo busca aprender la relación:
+
+```text
+Pulsos aplicados
+        ↓
+Modelo neuronal directo
+        ↓
+Respuesta dinámica estimada
+```
+
+Debido a que la respuesta del robot depende tanto de los pulsos actuales como de su comportamiento previo, se utilizó una estructura dinámica basada en un modelo **NARX**.
+
+De manera general:
+
+$$
+\hat{\mathbf{v}}(k+1)
+=
+f
+\left(
+\mathbf{v}(k),
+\mathbf{v}(k-1),
+\dots,
+\mathbf{u}(k-d),
+\mathbf{u}(k-d-1),
+\dots
+\right)
+$$
+
+La RNA directa permitió comprobar que era posible aproximar la relación dinámica existente entre las entradas aplicadas al RoboMaster y el movimiento observado experimentalmente.
+
+Los detalles de arquitectura, entrenamiento y validación se presentan en la sección **5. Modelos Neuronales**.
+
+---
+
+## 3.8 Desarrollo del modelo neuronal inverso
+
+Después de realizar la caracterización se desarrolló un segundo modelo orientado específicamente al problema inverso.
+
+En este caso la RNA busca aprender la relación:
+
+```text
+Movimiento requerido
+        ↓
+Modelo neuronal inverso
+        ↓
+Pulsos ux, uy, uz
+```
+
+Para construir el conjunto de entrenamiento se consideró el desplazamiento producido durante un horizonte temporal ($$T_h=0.50\;s$$) junto con información correspondiente al estado dinámico reciente del robot.
+
+El vector de entrada considera:
+
+$$
+[
+\Delta x_b,
+\Delta y_b,
+\Delta\psi,
+\mathbf{v}(k),
+\mathbf{v}(k-1),
+\mathbf{v}(k-2)
+]
+$$
+
+mientras que la salida corresponde a:
+
+$$
+[
+u_x,
+u_y,
+u_z
+]
+$$
+
+La arquitectura final utilizada fue:
+
+$$
+\boxed{12-16-12-3}
+$$
+
+El desempeño del modelo se verificó posteriormente mediante la comparación entre los pulsos experimentales y los pulsos estimados por la RNA.
+
+---
+
+## 3.9 Integración del controlador
+
+Después del entrenamiento y validación del modelo inverso, la RNA fue incorporada dentro de una estrategia de control realimentada.
+
+En cada iteración se calcula la diferencia entre la referencia deseada y el estado actual del robot:
+
+$$
+e_x=x_r-x
+$$
+
+$$
+e_y=y_r-y
+$$
+
+$$
+e_\psi=\psi_r-\psi
+$$
+
+El desplazamiento requerido se transforma posteriormente al marco de referencia del RoboMaster.
+
+La información obtenida, junto con el historial dinámico reciente, se introduce a la RNA inversa.
+
+La red genera los pulsos ($$u_x,\quad u_y,\quad u_z$$) que son enviados al chasis.
+
+De manera general:
+
+```text
+Referencia
+    ↓
+Cálculo del error
+    ↓
+Transformación al marco del robot
+    ↓
+RNA inversa
+    ↓
+Pulsos ux, uy, uz
+    ↓
+DJI RoboMaster S1
+    ↓
+Estado actual
+```
+
+El estado actual se actualiza continuamente, permitiendo recalcular la acción de control durante la ejecución.
+
+---
+
+## 3.10 Seguimiento de trayectoria
+
+Una vez implementado el control de posición y orientación, la estrategia se extendió al seguimiento de una referencia variante en el tiempo.
+
+La trayectoria utilizada para la evaluación fue un círculo definido mediante:
+
+$$
+x_r(t)
+=
+0.15
++
+0.30\sin(0.80t)
+$$
+
+$$
+y_r(t)
+=
+-0.20
++
+0.30\cos(0.80t)
+$$
+
+correspondiente a un círculo de radio $$R=0.30\;m$$
+
+La referencia se actualiza continuamente durante la ejecución y el controlador calcula los pulsos necesarios para reducir el error entre la posición deseada y la posición actual del robot.
+
+Durante las pruebas se realizaron $$2\text{ vueltas}$$ de la trayectoria circular.
+
+---
+
+## 3.11 Frecuencias de operación
+
+El sistema de control trabaja utilizando dos frecuencias principales.
+
+El cálculo interno del controlador se realiza aproximadamente $$f_{control}=100\;Hz$$, mientras que los pulsos se envían al RoboMaster aproximadamente a $$f_{envio}=20\;Hz$$
+
+Esta separación permite mantener una actualización frecuente del estado interno del controlador mientras se limita la frecuencia de comunicación con el chasis.
+
+---
+
+## 3.12 Validación experimental mediante VICON
+
+Finalmente se realizó una etapa de validación independiente utilizando nuevamente el sistema **VICON**.
+
+Durante esta prueba se compararon tres elementos:
+
+1. Trayectoria circular de referencia;
+2. Trayectoria estimada mediante la odometría del RoboMaster;
+3. Trayectoria medida externamente mediante VICON.
+
+De manera conceptual:
+
+```text
+             Referencia
+            /         \
+           ↓           ↓
+      Odometría      VICON
+           \           /
+            \         /
+             Comparación
+                  ↓
+             Métricas RMSE
+```
+
+La validación permitió calcular métricas de error de posición y orientación y comprobar la correspondencia existente entre la odometría interna del robot y la medición externa proporcionada por VICON.
+
+Los resultados cuantitativos obtenidos durante esta etapa se presentan en la sección **8. Resultados Experimentales**.
