@@ -1,23 +1,22 @@
 ---
 layout: default
 title: 8. Resultados Experimentales
-nav_order: 10
+nav_order: 9
 permalink: /resultados/
 ---
 
 # Resultados Experimentales
 
-Una vez completadas las etapas de adquisición de datos, procesamiento, sincronización, caracterización neuronal, desarrollo del control inverso y seguimiento de trayectoria, se realizaron pruebas experimentales con el **DJI RoboMaster S1**.
-
-El análisis de resultados se dividió en tres aspectos principales:
+El análisis de resultados se organizó en cuatro aspectos principales:
 
 1. **Calidad de la sincronización de los datos experimentales.**
-2. **Desempeño de la Red Neuronal Artificial de control inverso.**
-3. **Desempeño del controlador durante el seguimiento de la trayectoria circular.**
+2. **Desempeño del modelo neuronal.**
+3. **Seguimiento experimental de la trayectoria.**
+4. **Validación externa mediante el sistema VICON.**
 
 ---
 
-## 9.1 Resultados de la sincronización
+## 8.1 Resultados de la sincronización
 
 Antes de realizar el entrenamiento neuronal fue necesario comprobar que los pulsos enviados al RoboMaster estuvieran correctamente alineados temporalmente con el movimiento observado.
 
@@ -29,7 +28,7 @@ Después del procesamiento y sincronización de las señales se obtuvieron aprox
 | $u_y$ - $v_{by}$ | 0.97 |
 | $u_z$ - $\omega_z$ | 0.98 |
 
-Los tres valores se encuentran próximos a:
+Los valores obtenidos se encuentran próximos a:
 
 $$
 \rho=1
@@ -41,11 +40,11 @@ La correcta sincronización de las señales fue fundamental para construir un co
 
 ---
 
-## 9.2 Entrenamiento de la RNA inversa
+## 8.2 Entrenamiento de la RNA inversa
 
-Una vez construido el conjunto de datos correspondiente al problema inverso, se realizó el entrenamiento de la Red Neuronal Artificial.
+Una vez construido el conjunto de datos correspondiente al problema inverso, se realizó el entrenamiento de la Red Neuronal Artificial utilizada posteriormente dentro del controlador.
 
-La arquitectura utilizada fue:
+La arquitectura empleada fue:
 
 $$
 \boxed{12-16-12-3}
@@ -60,19 +59,19 @@ correspondiente a:
 | Capa oculta 2 | 12 |
 | Salida | 3 |
 
-Las salidas de la red corresponden a los pulsos:
+Las tres salidas de la red corresponden a los pulsos:
 
 $$
 u_x,\quad u_y,\quad u_z
 $$
 
-enviados al RoboMaster.
+enviados posteriormente al chasis del RoboMaster.
 
 ---
 
-## 9.3 Evaluación de la RNA mediante $R^2$
+## 8.3 Evaluación de la RNA mediante $R^2$
 
-El desempeño de la red neuronal inversa se evaluó mediante el coeficiente de determinación:
+El desempeño del modelo neuronal inverso se evaluó mediante el coeficiente de determinación:
 
 $$
 R^2=
@@ -86,17 +85,17 @@ $$
 
 donde:
 
-- ($y_i$) representa el pulso real.
-- ($\hat{y}_i$) representa el pulso estimado por la RNA.
-- ($\bar{y}$) representa el valor medio de la señal real.
+- \($y_i\$) representa el pulso experimental.
+- \($\hat{y}_i\$) representa el pulso estimado por la RNA.
+- \($\bar{y}\$) representa el valor medio de la señal experimental.
 
-Un valor cercano a:
+Un valor próximo a:
 
 $$
 R^2=1
 $$
 
-indica una elevada correspondencia entre los valores experimentales y los valores calculados por la red.
+indica una elevada correspondencia entre los datos experimentales y los valores estimados por la red.
 
 Los resultados obtenidos fueron aproximadamente:
 
@@ -112,15 +111,33 @@ $$
 R^2>0.99
 $$
 
-Estos resultados indican que la RNA fue capaz de reproducir con alta correspondencia la relación inversa presente en el conjunto de validación.
+Estos resultados indican que la RNA fue capaz de representar con alta correspondencia la relación inversa presente en el conjunto de validación.
 
 ---
 
-## 9.4 Seguimiento experimental de la trayectoria
+## 8.4 Validación gráfica de la RNA inversa
 
-Durante la prueba física se comparó continuamente la posición de referencia con la posición ejecutada por el RoboMaster.
+La siguiente figura muestra la comparación entre los pulsos experimentales y los pulsos estimados por la RNA para los tres canales de salida.
 
-El controlador utiliza el error:
+También se muestra el seguimiento de la trayectoria circular obtenido durante una de las pruebas experimentales.
+
+![Resultado del control neuronal inverso]({{ '/assets/images/resultado_control_inverso.jpeg' | relative_url }})
+
+*Figura 1. Validación del modelo neuronal inverso y seguimiento experimental de la trayectoria circular.*
+
+La correspondencia entre las señales experimentales y las estimaciones de la RNA es consistente con los elevados valores de \(R^2\) obtenidos durante la validación.
+
+Esta figura se utiliza principalmente como evidencia del **desempeño del modelo neuronal inverso**.
+
+---
+
+## 8.5 Seguimiento experimental de la trayectoria
+
+Después de validar la RNA inversa, el modelo fue incorporado al sistema de control para realizar el seguimiento de una trayectoria circular.
+
+Durante la ejecución se compara continuamente la posición de referencia con la posición actual del RoboMaster.
+
+Los errores de posición se definen mediante:
 
 $$
 e_x(t)=x_r(t)-x(t)
@@ -130,7 +147,7 @@ $$
 e_y(t)=y_r(t)-y(t)
 $$
 
-y la magnitud del error cartesiano:
+y la magnitud del error cartesiano se calcula como:
 
 $$
 e_p(t)=
@@ -139,43 +156,47 @@ e_x^2(t)+e_y^2(t)
 }
 $$
 
-A partir de este error, de la referencia futura y del estado dinámico reciente del robot, la RNA inversa calcula continuamente los pulsos:
+A partir de este error, del movimiento requerido y del estado dinámico reciente del robot, la RNA inversa calcula continuamente los pulsos:
 
 $$
 u_x,\quad u_y,\quad u_z
 $$
 
-necesarios para realizar el seguimiento.
+que son enviados al chasis.
+
+El sistema opera de manera realimentada, ya que el estado actual del robot se vuelve a utilizar en cada iteración para actualizar el error y calcular una nueva acción de control.
 
 ---
 
-## 9.7 Comparación referencia vs. RoboMaster
+## 8.6 Comparación entre referencia y trayectoria ejecutada
 
 La trayectoria de referencia corresponde al círculo ideal definido matemáticamente.
 
-La trayectoria del RoboMaster corresponde al desplazamiento obtenido durante la prueba experimental.
+La trayectoria experimental corresponde al desplazamiento realizado por el RoboMaster durante la ejecución del controlador.
 
 De manera conceptual:
 
 ```text
 Trayectoria circular de referencia
-             │
-             │
-             ▼
-       Comparación
-             ▲
-             │
-             │
+              │
+              │
+              ▼
+         Comparación
+              ▲
+              │
+              │
 Trayectoria ejecutada por el robot
 ```
 
-La trayectoria obtenida conserva la geometría general del círculo, aunque se observan desviaciones respecto a la referencia ideal durante diferentes regiones del recorrido.
+La trayectoria experimental conserva la geometría general del círculo, aunque presenta desviaciones respecto a la referencia ideal en determinadas regiones del recorrido.
+
+Estas diferencias pueden asociarse a las condiciones reales de operación del sistema, como retardos, saturación, dinámica y errores de estimación.
 
 ---
 
-## 9.8 Error RMSE de trayectoria
+## 8.7 Error RMSE de trayectoria
 
-Para evaluar cuantitativamente el comportamiento del seguimiento se utilizó el **Root Mean Square Error (RMSE)** de posición.
+Para evaluar cuantitativamente el seguimiento se utilizó el **Root Mean Square Error (RMSE)** de posición.
 
 La métrica se calcula mediante:
 
@@ -190,78 +211,173 @@ $$
 
 donde:
 
-- ($N$) representa el número total de muestras.
-- ($e_p(k)$) representa el error cartesiano instantáneo.
+- \($N\$) representa el número total de muestras.
+- \($e_p(k)\$) representa el error cartesiano instantáneo.
 
-Durante la prueba experimental se obtuvo aproximadamente:
+En una de las pruebas iniciales de seguimiento se obtuvo aproximadamente:
 
 $$
 \boxed{RMSE=5.6\;cm}
 $$
 
-El error máximo observado durante la ejecución fue aproximadamente:
+con un error máximo cercano a:
 
 $$
 \boxed{e_{max}=14.3\;cm}
 $$
 
+Este resultado indica que, durante dicha corrida, existió una desviación promedio de algunos centímetros entre la trayectoria ejecutada y la referencia.
+
+A pesar de estas desviaciones, el controlador permitió completar la trayectoria circular y mantener al robot próximo a la referencia durante la mayor parte del recorrido.
+
 ---
 
-## 9.9 Interpretación del error
+## 8.8 Validación experimental mediante VICON
+
+Posteriormente se realizó una validación adicional utilizando el sistema de captura de movimiento **VICON** como fuente externa de medición.
+
+El objetivo de esta prueba fue comparar simultáneamente:
+
+- la trayectoria circular de referencia;
+- la trayectoria estimada mediante la odometría del RoboMaster;
+- la trayectoria medida externamente mediante VICON.
+
+La comparación permite evaluar tanto el desempeño respecto a la referencia como la correspondencia entre la odometría interna del robot y una medición externa independiente.
+
+![Validación experimental mediante VICON]({{ '/assets/images/validacion_vicon.png' | relative_url }})
+
+*Figura 2. Validación experimental del seguimiento circular mediante comparación entre referencia, odometría y sistema VICON.*
+
+---
+
+## 8.9 Resultados de la validación VICON
+
+Durante la corrida mostrada en la Figura 2 se obtuvieron aproximadamente las siguientes métricas:
+
+| Métrica | Resultado |
+|---|---:|
+| RMSE VICON - referencia | 5.2 cm |
+| RMSE odometría - referencia | 5.2 cm |
+| RMSE VICON - odometría | 0.9 cm |
+| RMSE de orientación | 0.3° |
 
 El resultado:
 
 $$
-RMSE=5.6\;cm
+RMSE_{\text{VICON-ref}}=5.2\;cm
 $$
 
-indica que, considerando el recorrido completo, existió una desviación de algunos centímetros entre la trayectoria ejecutada y la referencia.
+representa el error entre la trayectoria medida externamente mediante VICON y la referencia circular.
 
-A pesar de estas desviaciones, el controlador permitió completar la trayectoria circular y mantener al robot próximo a la referencia durante la ejecución.
+De manera similar:
+
+$$
+RMSE_{\text{odom-ref}}=5.2\;cm
+$$
+
+representa el error obtenido utilizando la odometría del RoboMaster.
+
+La diferencia entre ambas estimaciones fue:
+
+$$
+RMSE_{\text{VICON-odom}}=0.9\;cm
+$$
+
+lo cual indica una elevada correspondencia espacial entre la trayectoria estimada por la odometría y la trayectoria registrada mediante VICON durante esta prueba.
+
+Para la orientación se obtuvo aproximadamente:
+
+$$
+RMSE_{\psi}=0.3^\circ
+$$
+
+indicando también una elevada correspondencia angular durante la ejecución.
 
 ---
 
-## 9.10 Evidencia gráfica
+## 8.10 Interpretación de la orientación
 
-La siguiente imagen muestra los principales resultados obtenidos durante la prueba experimental:
+En la gráfica de orientación puede observarse visualmente una diferencia aproximada de \(360^\circ\) entre algunas representaciones de yaw obtenidas mediante odometría y VICON.
 
-- Comparación entre los comandos reales y las predicciones de la RNA.
-- Valores de $R^2$ obtenidos para $u_x$, $u_y$ y $u_z$.
-- Trayectoria circular de referencia.
-- Trayectoria ejecutada por el DJI RoboMaster S1.
-- Error RMSE registrado durante la prueba.
+Sin embargo:
 
-![Resultado del control neuronal inverso]({{ site.baseurl }}/assets/images/resultado_control_inverso.jpeg)
+$$
+0^\circ \equiv 360^\circ
+$$
 
-*Figura 1. Resultado experimental del entrenamiento de la RNA inversa y seguimiento de la trayectoria circular.*
+debido a la periodicidad de la representación angular.
+
+Por esta razón, el error de orientación se calcula considerando el envolvimiento angular y no mediante una resta directa entre las representaciones gráficas.
+
+El bajo valor obtenido:
+
+$$
+RMSE_{\psi}=0.3^\circ
+$$
+
+indica que ambas mediciones representan prácticamente la misma orientación física durante la prueba.
 
 ---
 
-## 9.11 Resumen de resultados
+## 8.11 Comparación de las dos pruebas experimentales
+
+Las métricas de \(5.6\;cm\) y \(5.2\;cm\) corresponden a **corridas experimentales diferentes**.
+
+Por esta razón no deben interpretarse como valores contradictorios.
+
+La primera prueba permitió evaluar el desempeño general del controlador durante el seguimiento circular:
+
+$$
+RMSE\approx5.6\;cm
+$$
+
+mientras que la corrida posterior incorporó una validación independiente mediante VICON y obtuvo:
+
+$$
+RMSE_{\text{VICON-ref}}\approx5.2\;cm
+$$
+
+La segunda prueba proporciona una validación más completa debido a que permite contrastar simultáneamente la referencia, la odometría del RoboMaster y la medición externa de VICON.
+
+---
+
+## 8.12 Resumen de resultados
 
 Los principales resultados obtenidos durante el desarrollo experimental se resumen en la siguiente tabla:
 
 | Métrica | Resultado aproximado |
 |---|---:|
-| Correlación ($u_x-v_{bx}$) | 0.97 |
-| Correlación ($u_y-v_{by}$) | 0.97 |
-| Correlación ($u_z-\omega_z$) | 0.98 |
-| $R^2$ de ($u_x$) | 0.994 |
-| $R^2$ de ($u_y$) | 0.992 |
-| $R^2$ de ($u_z$) | 0.993 |
+| Correlación $u_x-v_{bx}$ | 0.97 |
+| Correlación $u_y-v_{by}$ | 0.97 |
+| Correlación $u_z-\omega_z$ | 0.98 |
+| $R^2$ de $u_x$ | 0.994 |
+| $R^2$ de $u_y$ | 0.992 |
+| $R^2$ de $u_z$ | 0.993 |
 | Radio de trayectoria | 0.30 m |
 | Velocidad tangencial nominal | 0.24 m/s |
 | Vueltas realizadas | 2 |
-| RMSE de seguimiento | 5.6 cm |
-| Error máximo | 14.3 cm |
+| RMSE prueba inicial | 5.6 cm |
+| Error máximo prueba inicial | 14.3 cm |
+| RMSE VICON - referencia | 5.2 cm |
+| RMSE odometría - referencia | 5.2 cm |
+| RMSE VICON - odometría | 0.9 cm |
+| RMSE de orientación | 0.3° |
 
 ---
 
-## 9.12 Resultado final
+## 8.13 Resultado final
 
-La implementación permitió integrar técnicas de procesamiento de datos, Redes Neuronales Artificiales y control sobre el sistema físico DJI RoboMaster S1.
+Los resultados obtenidos permiten evaluar el sistema en diferentes niveles.
 
-La RNA inversa obtuvo valores aproximados de:
+En primer lugar, la sincronización experimental presentó correlaciones aproximadas de:
+
+$$
+0.97,\quad0.97,\quad0.98
+$$
+
+entre los pulsos y las correspondientes variables dinámicas.
+
+Posteriormente, la RNA inversa obtuvo:
 
 $$
 R^2_{u_x}=0.994
@@ -277,16 +393,22 @@ $$
 
 durante la etapa de validación.
 
-Posteriormente, durante la ejecución física de la trayectoria circular, se obtuvo aproximadamente:
+Después de integrar el modelo inverso al controlador, el RoboMaster fue capaz de realizar el seguimiento completo de la trayectoria circular.
+
+Finalmente, la validación mediante VICON permitió comparar la referencia, la odometría y una medición externa independiente, obteniendo:
 
 $$
-RMSE=5.6\;cm
+RMSE_{\text{VICON-ref}}=5.2\;cm
 $$
 
-con un error máximo cercano a:
-
 $$
-e_{max}=14.3\;cm
+RMSE_{\text{VICON-odom}}=0.9\;cm
 $$
 
-Estos resultados muestran que el controlador neuronal fue capaz de generar pulsos de movimiento y realizar el seguimiento completo de la trayectoria circular, aunque con desviaciones asociadas al comportamiento dinámico y a las condiciones reales de operación del robot.
+y:
+
+$$
+RMSE_{\psi}=0.3^\circ
+$$
+
+La incorporación de VICON permite fortalecer la validación experimental del sistema al proporcionar una referencia externa para comprobar el comportamiento observado durante la ejecución física del controlador neuronal.
