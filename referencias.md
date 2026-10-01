@@ -1,7 +1,7 @@
 ---
 layout: default
-title: 11. Referencias
-nav_order: 14
+title: 10. Referencias
+nav_order: 11
 permalink: /referencias/
 ---
 
@@ -11,7 +11,7 @@ En esta sección se presentan los documentos, manuales y recursos técnicos util
 
 ---
 
-## 13.1 Documentos de la asignatura
+## 10.1 Documentos de la asignatura
 
 1. **López, A. y Caballero, J.**  
    *Evaluación I - Control Inteligente - Otoño 2026*.  
@@ -27,7 +27,7 @@ En esta sección se presentan los documentos, manuales y recursos técnicos util
 
 ---
 
-## 13.2 Software y herramientas utilizadas
+## 10.2 Software y herramientas utilizadas
 
 4. **Python Software Foundation.**  
    *Python Programming Language*.  
@@ -55,7 +55,7 @@ En esta sección se presentan los documentos, manuales y recursos técnicos util
 
 ---
 
-## 13.3 Sistema experimental
+## 10.3 Sistema experimental
 
 10. **DJI.**  
     *RoboMaster S1*.  
