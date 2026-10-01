@@ -66,4 +66,4 @@ Pulsos ux, uy, uz
 DJI RoboMaster S1
         ↓
 Estado actual
-        └──────────────→ Realimentación
+```
