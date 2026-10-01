@@ -1,7 +1,7 @@
 ---
 layout: default
-title: 5. Modelos Neuronales
-nav_order: 6
+title: 4. Modelos Neuronales
+nav_order: 5
 permalink: /modelos-neuronales/
 ---
 
@@ -15,7 +15,7 @@ Posteriormente se desarrolló un **modelo neuronal inverso**, cuyo propósito co
 
 ---
 
-## 5.1 Modelos neuronales utilizados
+## 4.1 Modelos neuronales utilizados
 
 El desarrollo neuronal del proyecto se dividió en dos etapas principales.
 
@@ -59,9 +59,9 @@ Este segundo modelo constituye posteriormente el elemento neuronal empleado dent
 
 ---
 
-# 5.2 Modelo Neuronal Directo
+# 4.2 Modelo Neuronal Directo
 
-## 5.2.1 Objetivo de caracterización
+## 4.2.1 Objetivo de caracterización
 
 La primera Red Neuronal Artificial se desarrolló con el objetivo de **caracterizar el comportamiento dinámico del DJI RoboMaster S1**.
 
@@ -113,7 +113,7 @@ permitiendo generar una estimación de la respuesta dinámica del RoboMaster.
 
 ---
 
-## 5.2.2 Estructura dinámica NARX
+## 4.2.2 Estructura dinámica NARX
 
 La respuesta del robot no depende únicamente del pulsos aplicado en el instante actual.
 
@@ -167,7 +167,7 @@ variables utilizadas como entrada de la red.
 
 ---
 
-## 5.2.3 Arquitectura del modelo directo
+## 4.2.3 Arquitectura del modelo directo
 
 La estructura NARX fue aproximada mediante una Red Neuronal Artificial multicapa.
 
@@ -210,7 +210,7 @@ De esta manera, la red aprende una aproximación del comportamiento dinámico lo
 
 ---
 
-## 5.2.4 Preparación y normalización de los datos
+## 4.2.4 Preparación y normalización de los datos
 
 Antes del entrenamiento del modelo directo, los datos fueron sometidos a las etapas de procesamiento descritas anteriormente:
 
@@ -243,7 +243,7 @@ Este procedimiento permite trabajar con variables que poseen diferentes unidades
 
 ---
 
-## 5.2.5 Entrenamiento del modelo directo
+## 4.2.5 Entrenamiento del modelo directo
 
 Los principales parámetros utilizados durante el entrenamiento fueron:
 
@@ -270,7 +270,7 @@ También se incorporaron mecanismos de regularización y *early stopping* para r
 
 ---
 
-## 5.2.6 Validación del modelo directo
+## 4.2.6 Validación del modelo directo
 
 El desempeño del modelo se evaluó comparando las velocidades estimadas por la RNA con las velocidades obtenidas experimentalmente.
 
@@ -294,7 +294,7 @@ Los resultados mostraron que la RNA era capaz de representar adecuadamente la di
 
 ---
 
-## 5.2.7 Integración del modelo directo
+## 4.2.7 Integración del modelo directo
 
 Una vez entrenado y validado, el modelo neuronal directo fue incorporado a la etapa de **identificación y caracterización del RoboMaster S1**.
 
@@ -320,9 +320,9 @@ A partir de la información experimental procesada se desarrolló posteriormente
 
 ---
 
-# 5.3 Modelo Neuronal Inverso
+# 4.3 Modelo Neuronal Inverso
 
-## 5.3.1 Objetivo de control
+## 4.3.1 Objetivo de control
 
 Después de realizar la caracterización mediante el modelo directo, se desarrolló una segunda Red Neuronal Artificial orientada específicamente al **control inverso**.
 
@@ -346,7 +346,7 @@ Esta RNA constituye el modelo utilizado posteriormente durante el control del ro
 
 ---
 
-## 5.3.2 Construcción del conjunto de entrenamiento
+## 4.3.2 Construcción del conjunto de entrenamiento
 
 El conjunto de entrenamiento del modelo inverso fue construido utilizando los datos experimentales previamente procesados y sincronizados.
 
@@ -397,7 +397,7 @@ Además del desplazamiento, la RNA utiliza información correspondiente al estad
 
 ---
 
-## 5.3.3 Entradas y salidas del modelo inverso
+## 4.3.3 Entradas y salidas del modelo inverso
 
 La entrada del modelo inverso está formada por:
 
@@ -470,7 +470,7 @@ ux, uy, uz
 
 ---
 
-## 5.3.4 Arquitectura del modelo inverso
+## 4.3.4 Arquitectura del modelo inverso
 
 La arquitectura utilizada fue:
 
@@ -503,7 +503,7 @@ Antes de ser procesadas por la red, las variables de entrada y salida son normal
 
 ---
 
-## 5.3.5 Entrenamiento del modelo inverso
+## 4.3.5 Entrenamiento del modelo inverso
 
 Los parámetros utilizados en el modelo final fueron:
 
@@ -543,7 +543,7 @@ El mecanismo de *early stopping* conserva el estado del modelo correspondiente a
 
 ---
 
-## 5.3.6 Validación del modelo inverso
+## 4.3.6 Validación del modelo inverso
 
 Después del entrenamiento, el modelo fue evaluado utilizando el conjunto de validación.
 
@@ -668,7 +668,7 @@ A diferencia del modelo directo, que fue incorporado durante la etapa de caracte
 
 ---
 
-## 5.3.8 RNA inversa dentro del lazo de control
+## 4.3.8 RNA inversa dentro del lazo de control
 
 Aunque la estrategia neuronal utilizada corresponde a un **modelo inverso**, durante la ejecución física el modelo se utiliza dentro de una arquitectura con realimentación.
 
