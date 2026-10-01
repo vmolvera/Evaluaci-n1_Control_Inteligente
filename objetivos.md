@@ -11,7 +11,7 @@ permalink: /objetivos/
 
 Aplicar los conceptos y procedimientos asociados al uso de **Redes Neuronales Artificiales (RNA)** en problemas de control sobre un sistema físico, utilizando como plataforma experimental el robot móvil omnidireccional **DJI RoboMaster S1**.
 
-El proyecto busca comprobar la capacidad de utilizar técnicas de Control Inteligente para caracterizar el comportamiento del robot y posteriormente emplear modelos neuronales para realizar tareas de control de posición y seguimiento de trayectoria.
+El proyecto busca desarrollar una estrategia de **Control Inteligente** que permita caracterizar el comportamiento dinámico del robot mediante un modelo neuronal directo y utilizar posteriormente un modelo neuronal inverso dentro de un sistema realimentado para realizar tareas de control de posición, orientación y seguimiento de trayectoria.
 
 ---
 
@@ -19,34 +19,51 @@ El proyecto busca comprobar la capacidad de utilizar técnicas de Control Inteli
 
 ### 1. Caracterización neuronal del RoboMaster S1
 
-Caracterizar el comportamiento del robot mediante una **Red Neuronal Artificial**, utilizando rutinas experimentales de movimiento y mediciones de posición y orientación obtenidas mediante el sistema de captura de movimiento **VICON**.
+Caracterizar el comportamiento dinámico del robot mediante un **modelo neuronal directo**, utilizando rutinas experimentales de movimiento y mediciones de posición y orientación obtenidas mediante el sistema de captura de movimiento **VICON**.
 
 Para ello se requiere:
 
-- Registrar los comandos enviados al RoboMaster.
-- Obtener la posición y orientación del robot.
-- Procesar y sincronizar ambas fuentes de información.
+- Registrar los pulsos enviados al RoboMaster.
+- Obtener la posición y orientación del robot mediante VICON.
+- Calcular las variables dinámicas necesarias a partir de las mediciones experimentales.
+- Procesar y sincronizar las señales obtenidas.
 - Construir un conjunto de datos adecuado para el entrenamiento.
-- Entrenar y validar un modelo neuronal capaz de representar el comportamiento del sistema.
+- Entrenar y validar una RNA capaz de representar la relación entre los comandos aplicados y la respuesta dinámica del robot.
 
 ---
 
-### 2. Control de posición y orientación
+### 2. Desarrollo del modelo neuronal inverso
 
-Desarrollar un **control neuronal** que permita al RoboMaster alcanzar una posición y orientación deseadas en el plano cartesiano.
+Desarrollar una **Red Neuronal Artificial inversa** capaz de determinar los pulsos de control necesarios para producir un movimiento requerido del RoboMaster.
 
-A partir de los datos experimentales obtenidos durante la etapa de caracterización, se desarrolla una RNA orientada al control, capaz de determinar los comandos necesarios para producir el desplazamiento requerido.
+Para ello se busca:
+
+- Construir el conjunto de entrenamiento correspondiente al problema inverso.
+- Utilizar información del desplazamiento requerido y del estado dinámico reciente del robot.
+- Entrenar la RNA para estimar los pulsos requeridos ($$ u_x,\quad u_y,\quad u_z $$)
+- Validar el desempeño del modelo mediante la comparación entre los pulsos experimentales y los pulsos estimados.
+- Evaluar el modelo mediante métricas como el coeficiente de determinación \(R^2\).
 
 ---
 
-### 3. Seguimiento de trayectoria
+### 3. Control de posición y orientación
 
-Implementar el controlador neuronal para realizar el seguimiento de una referencia cartesiana.
+Integrar el modelo neuronal inverso dentro de una estrategia de control realimentada que permita al RoboMaster alcanzar una posición y orientación deseadas en el plano cartesiano.
 
-Como trayectoria de evaluación se utiliza una trayectoria circular predefinida, comparando continuamente la posición deseada con el movimiento ejecutado por el RoboMaster.
+El controlador debe utilizar continuamente el estado actual del robot para determinar el error respecto a la referencia y calcular los pulsos necesarios para reducir dicho error.
 
-El desempeño del controlador se evalúa mediante:
+De manera general:
 
-- Comparación entre referencia y trayectoria ejecutada.
-- Error cuadrático medio (RMSE).
-- Comportamiento físico observado durante la prueba.
+```text
+Referencia deseada
+        ↓
+Cálculo del error
+        ↓
+RNA inversa
+        ↓
+Pulsos ux, uy, uz
+        ↓
+DJI RoboMaster S1
+        ↓
+Estado actual
+        └──────────────→ Realimentación
