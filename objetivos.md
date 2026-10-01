@@ -7,7 +7,7 @@ permalink: /objetivos/
 
 # Objetivos
 
-## Objetivo general
+## 2.1 Objetivo general
 
 Aplicar los conceptos y procedimientos asociados al uso de **Redes Neuronales Artificiales (RNA)** en problemas de control sobre un sistema físico, utilizando como plataforma experimental el robot móvil omnidireccional **DJI RoboMaster S1**.
 
@@ -15,9 +15,9 @@ El proyecto busca desarrollar una estrategia de **Control Inteligente** que perm
 
 ---
 
-## Objetivos particulares
+## 2.2 Objetivos particulares
 
-### 1. Caracterización neuronal del RoboMaster S1
+## 2.2.1 Caracterización neuronal del RoboMaster S1
 
 Caracterizar el comportamiento dinámico del robot mediante un **modelo neuronal directo**, utilizando rutinas experimentales de movimiento y mediciones de posición y orientación obtenidas mediante el sistema de captura de movimiento **VICON**.
 
@@ -32,7 +32,7 @@ Para ello se requiere:
 
 ---
 
-### 2. Desarrollo del modelo neuronal inverso
+## 2.2.2 Desarrollo del modelo neuronal inverso
 
 Desarrollar una **Red Neuronal Artificial inversa** capaz de determinar los pulsos de control necesarios para producir un movimiento requerido del RoboMaster.
 
@@ -46,7 +46,7 @@ Para ello se busca:
 
 ---
 
-### 3. Control de posición y orientación
+## 2.2.3 Control de posición y orientación
 
 Integrar el modelo neuronal inverso dentro de una estrategia de control realimentada que permita al RoboMaster alcanzar una posición y orientación deseadas en el plano cartesiano.
 
