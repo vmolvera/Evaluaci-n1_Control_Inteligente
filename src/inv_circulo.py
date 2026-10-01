@@ -1,0 +1,1236 @@
+# inv_circulo.py -- Paso 1
+# Verificacion independiente de nn_gui v6:
+#   datos (Vicon + comandos) -> sincronia AUTO (auto_frame) -> red INVERSA
+#   en distancia (inv_dist_v4) -> seguimiento de un CIRCULO predefinido
+#   usando SOLO el control inverso (sin baseline cinematico como ley).
+#
+# Especificaciones identicas a nn_gui v6:
+#   fs=100 Hz, despike lin 1.0 m/s / ang 150 deg/s, Savitzky 31/3
+#   entrada = [dx_b, dy_b, dyaw, v(k)..v(k-na+1)]   salida = u medio en Th
+#   na=3, Th=0.50 s, capas 16,12 tanh, Adam lr 3e-3, batch 32, wd 1e-5,
+#   3000 epocas, patience 60, val 25 % (corte temporal), seed 1
+#   lazo 100 Hz, envio 20 Hz, vmax 0.35, wmax 40, amax 0.40, AMAX_ANG 90
+import os, io, json, math, time, socket, threading, re, traceback
+import numpy as np
+import pandas as pd
+from scipy.signal import savgol_filter
+from scipy.spatial.transform import Rotation as Rot
+
+VERSION = "inv_circulo p1.2"
+SCHEME = "inv_dist_v4"          # compatible con los .npz de nn_gui v6
+
+ROBOT_IP, CMD_PORT, PUSH_PORT = "192.168.2.1", 40923, 40924
+NUM = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+
+FS = 100.0                       # malla de sincronia = frecuencia del lazo
+CTRL_DT = 1.0 / FS
+CMD_HZ = 20.0
+
+# trayectoria predefinida: x = cx + R sin(wt), y = cy + R cos(wt)
+CIRC = dict(cx=0.15, cy=-0.20, R=0.30, w=0.80, vueltas=2.0)
+
+TRAIN = dict(na=3, th=0.50, hid=(16, 12), epochs=3000, lr=3e-3,
+             batch=32, val=0.25, wd=1e-5, patience=60, seed=1)
+PREP = dict(thr_lin=1.0, thr_ang=150.0, sg_win=31)
+CTRL = dict(vmax=0.35, wmax=40.0, amax=0.40, amax_ang=90.0,
+            kp=1.0, kp_yaw=1.0, ff=1.0, age_max=0.40,
+            tol_ini=0.03, t_ini_max=15.0)
+
+
+# ============================ log ============================
+_LOG, _LOCK, _T0 = [], threading.Lock(), time.time()
+
+
+def dbg(*a):
+    line = f"[{time.time()-_T0:7.2f}s] " + " ".join(str(x) for x in a)
+    with _LOCK:
+        _LOG.append(line)
+        del _LOG[:-3000]
+    print(line, flush=True)
+
+
+def wrap180(a):
+    return (a + 180.0) % 360.0 - 180.0
+
+
+# ======================== robot ========================
+class TextChassis:
+    """Protocolo plaintext TCP 40923 + push UDP 40924 (igual que nn_gui)."""
+
+    def __init__(self, ip=ROBOT_IP):
+        self.sock = socket.create_connection((ip, CMD_PORT), timeout=5.0)
+        self.sock.settimeout(2.0)
+        self.buf, self.io = b"", threading.Lock()
+        self.link_ok, self.n_fail = True, 0
+        r = (self.send("command") or "").lower()
+        if "ok" not in r and "already in sdk" not in r:
+            raise RuntimeError(f"handshake fallo: {r!r}")
+        self.send("robot mode free")
+        self.lock = threading.Lock()
+        self.x = self.y = self.yaw = self.vbx = self.vby = self.wz = 0.0
+        self.t_state, self._pt, self._alive = 0.0, None, True
+        self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.udp.bind(("", PUSH_PORT))
+        self.udp.settimeout(0.5)
+        threading.Thread(target=self._push_loop, daemon=True).start()
+        self.send("chassis push position on pfreq 50 attitude on afreq 50")
+        dbg("robot conectado")
+
+    def _read(self):
+        while b";" not in self.buf:
+            c = self.sock.recv(1024)
+            if not c:
+                raise ConnectionError("socket cerrado")
+            self.buf += c
+        m, self.buf = self.buf.split(b";", 1)
+        return m.decode(errors="ignore").strip()
+
+    def send(self, cmd):
+        with self.io:
+            try:
+                self.sock.sendall((cmd + ";").encode())
+                r = self._read()
+                self.n_fail, self.link_ok = 0, True
+                return r
+            except socket.timeout:
+                return None
+            except Exception as e:
+                self.n_fail += 1
+                if self.n_fail >= 3:
+                    self.link_ok = False
+                dbg(f"io '{cmd}': {e}")
+                return None
+
+    @staticmethod
+    def parse_push(txt):
+        """Separa cada atributo con sus numeros.
+        Protocolo DJI:  'chassis push position <x> <y>'
+                        'chassis push attitude <pitch> <roll> <yaw>'
+        El yaw es el TERCER numero de attitude (nn_gui usaba el primero = pitch)."""
+        out, cur = {}, None
+        for tok in txt.replace(";", " ").split():
+            if tok in ("position", "attitude", "status"):
+                cur = tok
+                out[cur] = []
+            elif cur and NUM.fullmatch(tok):
+                out[cur].append(float(tok))
+        return out
+
+    def _push_loop(self):
+        n_raw = 0
+        while self._alive:
+            try:
+                data, _ = self.udp.recvfrom(2048)
+            except socket.timeout:
+                continue
+            except Exception:
+                break
+            txt = data.decode(errors="ignore")
+            n_raw += 1
+            if n_raw <= 5:
+                dbg(f"push crudo #{n_raw}: {txt!r}")
+            p, now = self.parse_push(txt), time.perf_counter()
+            att = p.get("attitude", [])
+            if len(att) >= 3:
+                with self.lock:
+                    self.yaw, self.t_state = att[2], now
+            pos = p.get("position", [])
+            if len(pos) >= 2:
+                with self.lock:
+                    self.x, self.y, self.t_state = pos[0], pos[1], now
+                self._vel(now)
+
+    def _vel(self, now):
+        with self.lock:
+            if self._pt is not None and 1e-3 < now - self._pt < 1.0:
+                dt = now - self._pt
+                vwx, vwy = (self.x - self._px) / dt, (self.y - self._py) / dt
+                p = math.radians(self.yaw)
+                bx = vwx * math.cos(p) + vwy * math.sin(p)
+                by = -vwx * math.sin(p) + vwy * math.cos(p)
+                self.vbx = 0.7 * self.vbx + 0.3 * bx
+                self.vby = 0.7 * self.vby + 0.3 * by
+                self.wz = 0.7 * self.wz + 0.3 * wrap180(self.yaw - self._pyaw) / dt
+            self._px, self._py, self._pyaw, self._pt = self.x, self.y, self.yaw, now
+
+    def observe(self):
+        with self.lock:
+            return dict(x=self.x, y=self.y, yaw=self.yaw, vbx=self.vbx,
+                        vby=self.vby, wz=self.wz, link=self.link_ok,
+                        age=time.perf_counter() - self.t_state if self.t_state else 9.9)
+
+    def cmd(self, vx, vy, wz):
+        self.send(f"chassis speed x {vx:.3f} y {vy:.3f} z {wz:.1f}")
+
+    def close(self):
+        self._alive = False
+        for c in ("chassis speed x 0 y 0 z 0",
+                  "chassis push position off attitude off"):
+            self.send(c)
+        for s in (self.sock, self.udp):
+            try:
+                s.close()
+            except Exception:
+                pass
+
+
+class SimChassis:
+    """Mismo simulador de nn_gui (primer orden + acoplamiento mecanum)."""
+
+    def __init__(self, tau=0.25, gain=0.75):
+        self.s = dict(x=0.0, y=0.0, yaw=0.0, vx=0.0, vy=0.0, wz=0.0)
+        self.tau, self.gain, self.u = tau, gain, (0.0, 0.0, 0.0)
+        self.lock, self._alive = threading.Lock(), True
+        threading.Thread(target=self._loop, daemon=True).start()
+
+    @staticmethod
+    def step(s, u, dt, tau=0.25, gain=0.75):
+        s["vx"] += dt / tau * (gain * u[0] - s["vx"])
+        s["vy"] += dt / tau * (gain * u[1] - s["vy"])
+        s["wz"] += dt / tau * (gain * u[2] - s["wz"])
+        s["vx"] += 0.15 * s["vy"] * dt
+        s["wz"] += 8.0 * s["vy"] * dt
+        p = math.radians(s["yaw"])
+        s["x"] += (s["vx"] * math.cos(p) - s["vy"] * math.sin(p)) * dt
+        s["y"] += (s["vx"] * math.sin(p) + s["vy"] * math.cos(p)) * dt
+        s["yaw"] = wrap180(s["yaw"] + s["wz"] * dt)
+
+    def _loop(self):
+        t = time.perf_counter()
+        while self._alive:
+            time.sleep(0.005)
+            now = time.perf_counter()
+            with self.lock:
+                self.step(self.s, self.u, now - t, self.tau, self.gain)
+            t = now
+
+    def observe(self):
+        with self.lock:
+            s = self.s
+            return dict(x=s["x"], y=s["y"], yaw=s["yaw"], vbx=s["vx"],
+                        vby=s["vy"], wz=s["wz"], age=0.0, link=True)
+
+    def cmd(self, vx, vy, wz):
+        with self.lock:
+            self.u = (vx, vy, wz)
+
+    def close(self):
+        self.cmd(0, 0, 0)
+        self._alive = False
+
+
+# ======================== datos (identico a nn_gui) ========================
+def load_vicon(path):
+    raw = open(path, encoding="utf-8-sig", errors="ignore").read().splitlines()
+    hdr = next((i for i, ln in enumerate(raw[:80])
+                if ln.split(",")[0].strip().strip('"').lower() == "frame"), None)
+    if hdr is None:
+        raise ValueError("No hay fila 'Frame' en el CSV de Vicon")
+    fs = 100.0
+    for ln in reversed(raw[:hdr]):
+        try:
+            v = float(ln.split(",")[0].strip())
+            if 10.0 <= v <= 1000.0:
+                fs = v
+                break
+        except ValueError:
+            pass
+    first = hdr + 1
+    c0 = raw[first].split(",")[0].strip() if first < len(raw) else ""
+    if not c0 or not c0.replace(".", "").replace("-", "").isdigit():
+        first = hdr + 2
+    cols = [c.strip().strip('"') for c in raw[hdr].split(",")]
+    df = pd.read_csv(io.StringIO("\n".join(raw[first:])), header=None,
+                     names=cols, on_bad_lines="skip")
+    df = df.apply(pd.to_numeric, errors="coerce").dropna(subset=["Frame"])
+    pick = lambda n: next((c for c in df.columns if str(c).strip().upper() == n), None)
+    cTX, cTY, cRX, cRY, cRZ = (pick(n) for n in ("TX", "TY", "RX", "RY", "RZ"))
+    if cTX is None or cTY is None:
+        raise ValueError("Faltan columnas TX/TY")
+    use = [c for c in (cRX, cRY, cRZ, cTX, cTY) if c is not None]
+    df[use] = df[use].interpolate(limit_direction="both")
+    if None not in (cRX, cRY, cRZ):
+        RV = np.array(df[[cRX, cRY, cRZ]].values, float, copy=True)
+        fin = ~np.isnan(RV).any(axis=1)
+        RV[~fin] = 0.0
+        M = Rot.from_rotvec(RV).as_matrix()
+        eul = Rot.from_matrix(M).as_euler("xyz", degrees=True)
+        rp = np.abs(eul[:, :2] - np.median(eul[:, :2], axis=0)).max(axis=1)
+        mad = np.median(np.abs(rp - np.median(rp))) * 1.4826
+        bad = (~fin) | (rp > max(4.0 * mad, 3.0))
+        good = ~bad
+        if good.sum() > 10:                      # quitar inclinacion de montaje
+            up = np.einsum("nji,j->ni", M[good], np.array([0.0, 0.0, 1.0]))
+            u = up.mean(0) / max(np.linalg.norm(up.mean(0)), 1e-12)
+            zw = np.array([0.0, 0.0, 1.0])
+            vx_, cs = np.cross(u, zw), float(u @ zw)
+            sn = np.linalg.norm(vx_)
+            if sn > 1e-9:
+                K = np.array([[0, -vx_[2], vx_[1]], [vx_[2], 0, -vx_[0]],
+                              [-vx_[1], vx_[0], 0]])
+                M = M @ (np.eye(3) + K + K @ K * ((1 - cs) / sn ** 2)).T
+        yaw = np.unwrap(np.arctan2(M[:, 1, 0], M[:, 0, 0]))
+        if bad.any() and bad.sum() < 0.5 * len(yaw):
+            idx = np.arange(len(yaw))
+            yaw = np.unwrap(np.interp(idx, idx[good], yaw[good]))
+        dbg(f"vicon: frames malos {int(bad.sum())}")
+    elif cRZ is not None:
+        yaw = np.unwrap(df[cRZ].values.astype(float))
+    else:
+        yaw = np.zeros(len(df))
+    x, y = df[cTX].values.astype(float), df[cTY].values.astype(float)
+    if max(np.ptp(x), np.ptp(y)) > 50:
+        x, y = x / 1000.0, y / 1000.0
+    fr = df["Frame"].values.astype(float)
+    dbg(f"vicon: {len(fr)} filas @ {fs} Hz")
+    return dict(fs=fs, t=(fr - fr[0]) / fs, x=x, y=y, yaw=yaw, n=len(fr))
+
+
+def load_cmds(path):
+    df = pd.read_csv(path, comment="#")
+    ren = {}
+    for c in df.columns:
+        cl = str(c).strip().lower()
+        if cl in ("t", "tiempo_s", "time", "t_s") or "tiempo" in cl:
+            ren[c] = "t"
+        elif cl in ("ux", "vx", "v_x_cmd", "vx_cmd"):
+            ren[c] = "ux"
+        elif cl in ("uy", "vy", "v_y_cmd", "vy_cmd"):
+            ren[c] = "uy"
+        elif cl in ("uz", "vz", "wz_cmd", "v_z_cmd", "vz_cmd"):
+            ren[c] = "uz"
+    df = df.rename(columns=ren)
+    for need in ("t", "ux", "uy", "uz"):
+        if need not in df.columns:
+            raise ValueError(f"Falta la columna '{need}'")
+    df = df[["t", "ux", "uy", "uz"]].apply(pd.to_numeric, errors="coerce").dropna()
+    t = df["t"].values.astype(float)
+    dbg(f"comandos: {len(t)} filas @ {1/np.diff(t).mean():.1f} Hz")
+    return dict(t=t, u=df[["ux", "uy", "uz"]].values.astype(float), n=len(t))
+
+
+def despike(a, fs, thr, iters=5):
+    a = np.array(a, float)
+    for _ in range(iters):
+        bad = np.abs(np.diff(a, prepend=a[0])) * fs > thr
+        if not bad.any():
+            break
+        a[bad] = np.nan
+        a = pd.Series(a).interpolate(limit_direction="both").values.astype(float)
+    return a
+
+
+def zoh_resample(t_src, v_src, t_tgt):
+    i = np.clip(np.searchsorted(t_src, t_tgt, side="right") - 1, 0, len(t_src) - 1)
+    return v_src[i]
+
+
+def body_velocities(x, y, yaw, fs, win=31, poly=3):
+    win = min(max(7, int(win) | 1), (len(x) // 2) * 2 - 1)
+    dt = 1.0 / fs
+    vx = savgol_filter(x, win, poly, deriv=1, delta=dt)
+    vy = savgol_filter(y, win, poly, deriv=1, delta=dt)
+    wz = np.degrees(savgol_filter(yaw, win, poly, deriv=1, delta=dt))
+    return np.column_stack([vx * np.cos(yaw) + vy * np.sin(yaw),
+                            -vx * np.sin(yaw) + vy * np.cos(yaw), wz])
+
+
+def auto_frame(xv, yv, yawv, t_v, U, t_u, fs, max_lag=350, step=2):
+    """(retardo d, signo s, offset) con mapa u->v diagonal y ganancias > 0."""
+    tg = np.arange(0.0, min(t_v[-1], t_u[-1]), 1.0 / fs)
+    xg, yg, wg = (np.interp(tg, t_v, a) for a in (xv, yv, yawv))
+    Ug = zoh_resample(t_u, U, tg)
+    win = max(7, min(31, (len(xg) // 2) * 2 - 1))
+    vx = savgol_filter(xg, win, 3, deriv=1, delta=1 / fs)
+    vy = savgol_filter(yg, win, 3, deriv=1, delta=1 / fs)
+    wz = np.degrees(savgol_filter(wg, win, 3, deriv=1, delta=1 / fs))
+    best = None
+    offs = np.radians(np.arange(-180.0, 180.0, 3.0))
+    for d in range(0, max_lag, step):
+        Ud = Ug[:len(Ug) - d] if d else Ug
+        n = min(len(Ud), len(wg) - d)
+        if n < 200:
+            break
+        Ud, p0, a, b, c = Ud[:n], wg[d:d + n], vx[d:d + n], vy[d:d + n], wz[d:d + n]
+        M = np.column_stack([Ud, np.ones(n)])
+        for s in (1, -1):
+            for off in offs:
+                psi = p0 + off
+                V = np.column_stack([a * np.cos(psi) + b * np.sin(psi),
+                                     s * (-a * np.sin(psi) + b * np.cos(psi)),
+                                     s * c])
+                W = np.linalg.lstsq(M, V, rcond=None)[0]
+                g = np.diag(W[:3, :3]).copy()
+                if np.any(g <= 0.05):
+                    continue
+                r2 = 1 - ((V - M @ W) ** 2).sum(0) / (((V - V.mean(0)) ** 2).sum(0) + 1e-12)
+                dgn = np.abs(g).sum() / (np.abs(W[:3, :3]).sum() + 1e-9)
+                sc = r2.mean() + 0.5 * dgn
+                if best is None or sc > best[0]:
+                    best = (sc, d, s, float(off), r2, g, dgn)
+    if best is None:
+        return None
+    _, d, s, off, r2, g, dgn = best
+    dbg(f"auto_frame: d={d} ({d*1000/fs:.0f} ms) s={s:+d} off={math.degrees(off):+.1f} "
+        f"R2={np.round(r2,3).tolist()} gan={np.round(g,3).tolist()} diag={dgn*100:.0f}%")
+    return dict(d=int(d), s=int(s), off=off, r2=r2.tolist(), gains=g.tolist(), diag=dgn)
+
+
+def sincronizar(vic, cmd, fs=FS, **kw):
+    p = {**PREP, **kw}
+    x = despike(vic["x"], vic["fs"], p["thr_lin"])
+    y = despike(vic["y"], vic["fs"], p["thr_lin"])
+    yaw = despike(vic["yaw"], vic["fs"], math.radians(p["thr_ang"]))
+    T = min(vic["t"][-1], cmd["t"][-1])
+    tg = np.arange(0.0, T, 1.0 / fs)
+    xg, yg, yawg = (np.interp(tg, vic["t"], a) for a in (x, y, yaw))
+    U = zoh_resample(cmd["t"], cmd["u"], tg)
+    fr = auto_frame(x, y, yaw, vic["t"], cmd["u"], cmd["t"], fs)
+    if fr is None:
+        raise ValueError("auto_frame: ninguna convencion da ganancias positivas")
+    yg = fr["s"] * yg
+    yawg = fr["s"] * (yawg + fr["off"])
+    V = body_velocities(xg, yg, yawg, fs, p["sg_win"])
+    d = fr["d"]
+    if d > 0:
+        U, V, tg = U[:-d], V[d:], tg[:-d]
+        xg, yg, yawg = xg[d:], yg[d:], yawg[d:]
+    gains = [float(np.polyfit(U[:, i], V[:, i], 1)[0]) for i in range(3)]
+    corrs = [float(np.corrcoef(U[:, i], V[:, i])[0, 1]) for i in range(3)]
+    dbg(f"sync n={len(tg)} gains={np.round(gains,3).tolist()} corrs={np.round(corrs,3).tolist()}")
+    return dict(t=tg, U=U, V=V, x=xg, y=yg, yaw=yawg, fs=fs, frame=fr,
+                gains=gains, corrs=corrs)
+
+
+# ======================== MLP (identico) ========================
+class MLP:
+    def __init__(self, sizes, seed=0):
+        rng = np.random.default_rng(seed)
+        self.sizes, self.W, self.b = sizes, [], []
+        for i in range(len(sizes) - 1):
+            lim = math.sqrt(6.0 / (sizes[i] + sizes[i + 1]))
+            self.W.append(rng.uniform(-lim, lim, (sizes[i], sizes[i + 1])))
+            self.b.append(np.zeros(sizes[i + 1]))
+        self.mW = [np.zeros_like(w) for w in self.W]
+        self.vW = [np.zeros_like(w) for w in self.W]
+        self.mb = [np.zeros_like(b) for b in self.b]
+        self.vb = [np.zeros_like(b) for b in self.b]
+        self.step = 0
+        self.xm = self.xs = self.ym = self.ys = None
+
+    def _fwd(self, X):
+        acts, h = [X], X
+        for i in range(len(self.W) - 1):
+            h = np.tanh(h @ self.W[i] + self.b[i])
+            acts.append(h)
+        acts.append(h @ self.W[-1] + self.b[-1])
+        return acts
+
+    def predict(self, X):
+        return self._fwd((X - self.xm) / self.xs)[-1] * self.ys + self.ym
+
+    def fit(self, X, Y, Xv, Yv, epochs, batch, lr, wd, patience, cb=None, stop=None):
+        self.xm, self.xs = X.mean(0), X.std(0) + 1e-8
+        self.ym, self.ys = Y.mean(0), Y.std(0) + 1e-8
+        Xn, Yn = (X - self.xm) / self.xs, (Y - self.ym) / self.ys
+        Xvn, Yvn = (Xv - self.xm) / self.xs, (Yv - self.ym) / self.ys
+        rng = np.random.default_rng(0)
+        hist, best, best_state, bad = {"train": [], "val": []}, np.inf, None, 0
+        for ep in range(epochs):
+            if stop and stop():
+                break
+            perm, tot = rng.permutation(len(Xn)), 0.0
+            for s in range(0, len(Xn), batch):
+                idx = perm[s:s + batch]
+                acts = self._fwd(Xn[idx])
+                err = acts[-1] - Yn[idx]
+                tot += float(np.mean(err ** 2)) * len(idx)
+                g = 2.0 * err / len(idx)
+                gW, gb = [None] * len(self.W), [None] * len(self.b)
+                for i in range(len(self.W) - 1, -1, -1):
+                    gW[i] = acts[i].T @ g + wd * self.W[i]
+                    gb[i] = g.sum(0)
+                    if i > 0:
+                        g = (g @ self.W[i].T) * (1.0 - acts[i] ** 2)
+                self.step += 1
+                c1, c2 = 1 - 0.9 ** self.step, 1 - 0.999 ** self.step
+                for i in range(len(self.W)):
+                    self.mW[i] = 0.9 * self.mW[i] + 0.1 * gW[i]
+                    self.vW[i] = 0.999 * self.vW[i] + 0.001 * gW[i] ** 2
+                    self.mb[i] = 0.9 * self.mb[i] + 0.1 * gb[i]
+                    self.vb[i] = 0.999 * self.vb[i] + 0.001 * gb[i] ** 2
+                    self.W[i] -= lr * (self.mW[i] / c1) / (np.sqrt(self.vW[i] / c2) + 1e-8)
+                    self.b[i] -= lr * (self.mb[i] / c1) / (np.sqrt(self.vb[i] / c2) + 1e-8)
+            va = float(np.mean((self._fwd(Xvn)[-1] - Yvn) ** 2))
+            hist["train"].append(tot / len(Xn))
+            hist["val"].append(va)
+            if va < best - 1e-7:
+                best, bad = va, 0
+                best_state = ([w.copy() for w in self.W], [b.copy() for b in self.b])
+            else:
+                bad += 1
+                if bad >= patience:
+                    dbg(f"early stopping epoca {ep}")
+                    break
+            if cb and ep % 10 == 0:
+                cb(ep, hist["train"][-1], va)
+        if best_state:
+            self.W, self.b = best_state
+        return hist
+
+    def save(self, path, meta):
+        d = {f"W{i}": w for i, w in enumerate(self.W)}
+        d.update({f"b{i}": b for i, b in enumerate(self.b)})
+        d.update(xm=self.xm, xs=self.xs, ym=self.ym, ys=self.ys,
+                 sizes=np.array(self.sizes), meta=np.array(json.dumps(meta)))
+        np.savez(path, **d)
+
+    @staticmethod
+    def load(path):
+        z = np.load(path, allow_pickle=True)
+        sizes = [int(s) for s in z["sizes"]]
+        m = MLP(sizes)
+        m.W = [z[f"W{i}"] for i in range(len(sizes) - 1)]
+        m.b = [z[f"b{i}"] for i in range(len(sizes) - 1)]
+        m.xm, m.xs, m.ym, m.ys = z["xm"], z["xs"], z["ym"], z["ys"]
+        return m, json.loads(str(z["meta"]))
+
+
+def build_inverse_dist(U, V, X, Y, YAW, na, h, sub=None):
+    sub = sub or max(1, h // 8)
+    Xs, Ys = [], []
+    for k in range(na - 1, len(U) - h - 1, sub):
+        dxw, dyw, psi = X[k + h] - X[k], Y[k + h] - Y[k], YAW[k]
+        Xs.append(np.concatenate([
+            [dxw * math.cos(psi) + dyw * math.sin(psi),
+             -dxw * math.sin(psi) + dyw * math.cos(psi),
+             math.degrees(YAW[k + h] - YAW[k])],
+            np.concatenate([V[k - i] for i in range(na)])]))
+        Ys.append(U[k:k + h].mean(axis=0))
+    return np.array(Xs), np.array(Ys)
+
+
+def entrenar(sync, cb=None, stop=None, **kw):
+    p = {**TRAIN, **kw}
+    na, th = p["na"], p["th"]
+    h = max(1, int(round(th * sync["fs"])))
+    X, Y = build_inverse_dist(sync["U"], sync["V"], sync["x"], sync["y"],
+                              sync["yaw"], na, h)
+    if len(X) < 100:
+        raise ValueError(f"Solo {len(X)} muestras")
+    nc = int(len(X) * (1 - p["val"]))
+    Xt, Yt, Xv, Yv = X[:nc], Y[:nc], X[nc:], Y[nc:]
+    sizes = [X.shape[1], *p["hid"], Y.shape[1]]
+    m = MLP(sizes, seed=p["seed"])
+    hist = m.fit(Xt, Yt, Xv, Yv, p["epochs"], p["batch"], p["lr"], p["wd"],
+                 p["patience"], cb, stop)
+    Yp = m.predict(Xv)
+    den = ((Yv - Yv.mean(0)) ** 2).sum(0) + 1e-12
+    r2 = 1 - ((Yv - Yp) ** 2).sum(0) / den
+    r2b = 1 - ((Yv - Xv[:, :3] / th) ** 2).sum(0) / den          # baseline d/Th
+    Wl = np.linalg.lstsq(np.c_[Xt, np.ones(len(Xt))], Yt, rcond=None)[0]
+    r2l = 1 - ((np.c_[Xv, np.ones(len(Xv))] @ Wl - Yv) ** 2).sum(0) / den
+    ok = not (np.any(r2 < 0.90) or np.any(r2 < r2b - 0.02))
+    dnorm = float(np.percentile(np.hypot(X[:, 0], X[:, 1]), 99))
+    meta = dict(scheme=SCHEME, version=VERSION, na=na, nb=0, fs=sync["fs"],
+                inverse=True, dist=True, th=th, h=h, sizes=sizes,
+                n_in=int(X.shape[1]), n_muestras=int(len(X)),
+                frame={k: (v if not isinstance(v, np.ndarray) else v.tolist())
+                       for k, v in sync["frame"].items()},
+                r2=r2.tolist(), r2_base=r2b.tolist(), r2_lin=r2l.tolist(),
+                ok=bool(ok), dstats=dict(dnorm=dnorm))
+    dbg(f"R2 red {np.round(r2,4).tolist()}  base {np.round(r2b,4).tolist()}  "
+        f"lineal {np.round(r2l,4).tolist()}  ok={ok}  |d|p99={dnorm:.3f}")
+    return m, meta, dict(hist=hist, Yv=Yv, Yp=Yp, Xv=Xv)
+
+
+# ======================== trayectoria ========================
+def circulo(fs=50.0, cx=0.15, cy=-0.20, R=0.30, w=0.80, vueltas=2.0):
+    T = vueltas * 2 * math.pi / w
+    t = np.arange(0.0, T, 1.0 / fs)
+    x, y = cx + R * np.sin(w * t), cy + R * np.cos(w * t)
+    return dict(t=t, x=x, y=y, yaw=np.zeros_like(t), fs=fs, T=float(t[-1]),
+                vpk=R * w)
+
+
+# ======================== validacion con Vicon ========================
+def kabsch2d(P, Q):
+    """R, t (rotacion propia) que minimizan |R q + t - p|."""
+    pm, qm = P.mean(0), Q.mean(0)
+    U, _, Vt = np.linalg.svd((Q - qm).T @ (P - pm))
+    D = np.diag([1.0, np.sign(np.linalg.det(Vt.T @ U.T))])
+    R = Vt.T @ D @ U.T
+    return R, pm - R @ qm
+
+
+def _speed(x, y, fs):
+    win = max(7, min(31, (len(x) // 2) * 2 - 1))
+    return np.hypot(savgol_filter(x, win, 3, deriv=1, delta=1 / fs),
+                    savgol_filter(y, win, 3, deriv=1, delta=1 / fs))
+ 
+
+def load_runlog(path):
+    """Log de inv_circulo o robotlog de nn_gui (ignora la linea '#')."""
+    df = pd.read_csv(path, comment="#")
+    for c in ("t", "x", "y", "yaw"):
+        if c not in df.columns:
+            raise ValueError(f"El log no tiene la columna '{c}'")
+    return df
+
+
+def validar_vicon(vic, log, ventana="inicio", solo_traj=True, fs=FS):
+    """Alinea Vicon (verdad) con el log del robot (odometria).
+    1) tiempo: correlacion cruzada normalizada de |v| (no depende del marco)
+    2) espacio: ajuste rigido 2D probando y -> +/-y (reflexion Vicon)
+       ventana='inicio': ajuste con el primer tramo (la deriva de odometria
+       queda visible despues);  'completa': ajuste con toda la corrida.
+    3) yaw: se quita el offset de montaje del marcador (media circular)."""
+    t_l = log["t"].values.astype(float)
+    t_l = t_l - t_l[0]
+    tg = np.arange(0.0, t_l[-1], 1.0 / fs)
+    L = len(tg)
+    if L < 3 * fs:
+        raise ValueError("Log demasiado corto (< 3 s)")
+    io = np.clip(np.searchsorted(t_l, tg, side="right") - 1, 0, len(t_l) - 1)
+    xo = np.interp(tg, t_l, log["x"].values.astype(float))
+    yo = np.interp(tg, t_l, log["y"].values.astype(float))
+    yawo = np.degrees(np.unwrap(np.radians(log["yaw"].values.astype(float))))
+    yawo = np.interp(tg, t_l, yawo)
+    has_ref = "x_ref" in log.columns and "y_ref" in log.columns
+    xr = log["x_ref"].values.astype(float)[io] if has_ref else None
+    yr = log["y_ref"].values.astype(float)[io] if has_ref else None
+    mode = log["mode"].astype(str).values[io] if "mode" in log.columns \
+        else np.array(["?"] * L)
+
+    # Vicon a la malla
+    xv0 = despike(vic["x"], vic["fs"], PREP["thr_lin"])
+    yv0 = despike(vic["y"], vic["fs"], PREP["thr_lin"])
+    tv = np.arange(0.0, vic["t"][-1], 1.0 / fs)
+    if len(tv) < L + 1:
+        raise ValueError(f"Vicon ({tv[-1]:.1f} s) es mas corto que la corrida "
+                         f"({tg[-1]:.1f} s): graba Vicon antes de ejecutar y "
+                         "detenlo despues")
+    xvg, yvg = np.interp(tv, vic["t"], xv0), np.interp(tv, vic["t"], yv0)
+    yawvg = np.interp(tv, vic["t"], vic["yaw"])
+
+    # 1) retardo por NCC de rapidez
+    from scipy.signal import correlate
+    sv, so = _speed(xvg, yvg, fs), _speed(xo, yo, fs)
+    so0 = so - so.mean()
+    num = correlate(sv, so0, mode="valid", method="fft")
+    c1 = np.concatenate([[0.0], np.cumsum(sv)])
+    c2 = np.concatenate([[0.0], np.cumsum(sv ** 2)])
+    m1 = (c1[L:] - c1[:-L]) / L
+    var = np.maximum((c2[L:] - c2[:-L]) / L - m1 ** 2, 1e-12)
+    ncc = num / (L * np.sqrt(var) * (so0.std() + 1e-12))
+    k = int(np.argmax(ncc))
+    xv, yv, yawv = xvg[k:k + L], yvg[k:k + L], yawvg[k:k + L]
+
+    # 2) ajuste rigido
+    P = np.column_stack([xo, yo])
+    if ventana == "inicio":
+        path = np.concatenate([[0.0], np.cumsum(np.hypot(np.diff(xo), np.diff(yo)))])
+        n_w = int(np.searchsorted(path, 0.40))
+        n_w = max(n_w, int(2 * fs))
+        w = slice(0, min(n_w, L))
+    else:
+        w = slice(0, L)
+    best = None
+    for s in (1, -1):
+        Q = np.column_stack([xv, s * yv])
+        R, t = kabsch2d(P[w], Q[w])
+        res = float(np.sqrt((((Q[w] @ R.T + t) - P[w]) ** 2).sum(1).mean()))
+        if best is None or res < best[0]:
+            best = (res, s, R, t)
+    res_fit, s, R, t = best
+    V = np.column_stack([xv, s * yv]) @ R.T + t
+    theta = math.degrees(math.atan2(R[1, 0], R[0, 0]))
+
+    # 3) yaw
+    yawv_al = s * np.degrees(yawv) + theta
+    dy = np.radians(wrap180(yawo[w] - yawv_al[w]))
+    off = math.degrees(math.atan2(np.sin(dy).mean(), np.cos(dy).mean()))
+    yawv_al = yawv_al + off
+    e_yaw = wrap180(yawv_al - yawo)
+
+    # metricas
+    msk = np.isin(mode, ["CIRCULO", "TRAJ"]) if solo_traj else np.ones(L, bool)
+    if not msk.any():
+        msk = np.ones(L, bool)
+    rms = lambda a: float(np.sqrt(np.mean(a[msk] ** 2)))
+    e_vo = np.hypot(V[:, 0] - xo, V[:, 1] - yo)
+    out = dict(t=tg, xo=xo, yo=yo, xv=V[:, 0], yv=V[:, 1], yawo=yawo,
+               yawv=yawv_al, e_yaw=e_yaw, e_vo=e_vo, mask=msk, mode=mode,
+               lag=k / fs, ncc=float(ncc[k]), s=s, theta=theta, off=off,
+               res_fit=res_fit, n_fit=w.stop, ventana=ventana,
+               rms_vo=rms(e_vo), max_vo=float(e_vo[msk].max()),
+               rms_yaw=rms(e_yaw), xr=xr, yr=yr)
+    if has_ref:
+        e_vr, e_or = np.hypot(V[:, 0] - xr, V[:, 1] - yr), np.hypot(xo - xr, yo - yr)
+        out.update(e_vr=e_vr, e_or=e_or, rms_vr=rms(e_vr), max_vr=float(e_vr[msk].max()),
+                   rms_or=rms(e_or))
+    dbg(f"validacion: lag {k/fs:.2f} s (NCC {ncc[k]:.2f})  s={s:+d}  rot {theta:+.1f}  "
+        f"off yaw {off:+.1f}  ajuste {res_fit*100:.1f} cm  |  RMSE vicon-ref "
+        f"{out.get('rms_vr', float('nan'))*100:.1f} cm  odom-ref "
+        f"{out.get('rms_or', float('nan'))*100:.1f} cm  vicon-odom {out['rms_vo']*100:.1f} cm")
+    return out
+
+
+def plot_validacion(fig, r, traj=None):
+    fig.clear()
+    gs = fig.add_gridspec(3, 2, width_ratios=[1.3, 1])
+    ax = fig.add_subplot(gs[:, 0])
+    m = r["mask"]
+    if r["xr"] is not None:
+        ax.plot(r["yr"][m], r["xr"][m], color="#f39c12", lw=2.5, label="referencia")
+    elif traj is not None:
+        ax.plot(traj["y"], traj["x"], color="#f39c12", lw=2.5, label="referencia")
+    ax.plot(r["yo"][m], r["xo"][m], color="#2e86de", lw=1.4, label="robot (odometria)")
+    ax.plot(r["yv"][m], r["xv"][m], color="#c0392b", lw=1.4, ls="--", label="Vicon")
+    ax.plot(r["yv"][m][0], r["xv"][m][0], "o", color="#27ae60", label="inicio")
+    ax.set_xlabel("y [m]  (derecha +)", fontsize=8)
+    ax.set_ylabel("x [m]  (adelante +)", fontsize=8)
+    ax.set_title(f"Trayectoria  (ajuste: {r['ventana']})", fontsize=9)
+    ax.axis("equal")
+    ax.grid(alpha=.3)
+    ax.legend(fontsize=7, loc="best")
+
+    t = r["t"]
+    a1 = fig.add_subplot(gs[0, 1])
+    if "e_vr" in r:
+        a1.plot(t, r["e_vr"] * 100, color="#c0392b", lw=1, label=f"Vicon-ref {r['rms_vr']*100:.1f}")
+        a1.plot(t, r["e_or"] * 100, color="#2e86de", lw=1, label=f"odom-ref {r['rms_or']*100:.1f}")
+    a1.plot(t, r["e_vo"] * 100, color="#7f8c8d", lw=1, label=f"Vicon-odom {r['rms_vo']*100:.1f}")
+    a1.set_title("error de posicion [cm]  (RMSE en leyenda)", fontsize=8)
+    a1.legend(fontsize=6)
+    a2 = fig.add_subplot(gs[1, 1], sharex=a1)
+    a2.plot(t, r["yawo"], color="#2e86de", lw=1, label="odom")
+    a2.plot(t, r["yawv"], color="#c0392b", lw=1, ls="--", label="Vicon")
+    a2.set_title("yaw [deg]", fontsize=8)
+    a2.legend(fontsize=6)
+    a3 = fig.add_subplot(gs[2, 1], sharex=a1)
+    a3.plot(t, r["e_yaw"], color="#8e44ad", lw=1)
+    a3.set_title(f"error yaw [deg]  RMSE {r['rms_yaw']:.1f}", fontsize=8)
+    a3.set_xlabel("t [s]", fontsize=8)
+    for a in (a1, a2, a3):
+        a.grid(alpha=.3)
+        a.tick_params(labelsize=6)
+        if (~r["mask"]).any():
+            tt = t[r["mask"]]
+            a.axvspan(tt[0], tt[-1], color="#f39c12", alpha=.08,
+                      label="_circulo")
+    ax.tick_params(labelsize=7)
+    fig.tight_layout()
+
+
+# ======================== controlador (solo inverso) ========================
+class InvController:
+    """Estados: IDLE -> INICIO (ir al primer punto) -> CIRCULO -> IDLE.
+    La ley es siempre u = RNA(d, v lags); si la red falla -> paro."""
+
+    def __init__(self, bot, model, meta, traj, P=None):
+        self.bot, self.model, self.meta, self.traj = bot, model, meta, traj
+        self.P = {**CTRL, **(P or {})}
+        self.th, self.na = float(meta["th"]), int(meta["na"])
+        self.dnorm = max(meta.get("dstats", {}).get("dnorm", 1.0), 0.02)
+        self.mode, self.running = "IDLE", True
+        self.u_out, self.u_prev = (0.0, 0.0, 0.0), np.zeros(3)
+        self.vhist, self.state = [], bot.observe()
+        self.trail, self.errs, self.log = [], [], []
+        self.ref, self.status, self.n_sat = (0, 0, 0), "listo", 0
+        self.lock = threading.Lock()
+        if abs(meta["fs"] - FS) > 1e-6:
+            dbg(f"!! red entrenada a {meta['fs']} Hz y lazo a {FS} Hz: los lags no coinciden")
+        threading.Thread(target=self._loop, daemon=True).start()
+        threading.Thread(target=self._sender, daemon=True).start()
+
+    # --- API ---
+    def iniciar(self):
+        with self.lock:
+            self.trail, self.errs, self.log, self.n_sat = [], [], [], 0
+        self.t_ini = time.perf_counter()
+        self.mode = "INICIO"
+        dbg("-> INICIO (hacia el primer punto del circulo)")
+
+    def stop(self, motivo="STOP"):
+        if self.mode != "IDLE":
+            dbg(f"paro: {motivo}")
+        self.mode, self.status = "IDLE", motivo
+        self.u_out, self.u_prev = (0.0, 0.0, 0.0), np.zeros(3)
+        for _ in range(3):
+            try:
+                self.bot.cmd(0, 0, 0)
+            except Exception:
+                pass
+
+    def close(self):
+        self.stop("cerrado")
+        self.running = False
+
+    def rmse(self):
+        a = np.asarray(self.errs)
+        return (float(np.sqrt((a ** 2).mean())), float(a.max())) if len(a) else (0.0, 0.0)
+
+    # --- nucleo ---
+    def _to_body(self, dxw, dyw, yaw_deg):
+        p = math.radians(yaw_deg)
+        return dxw * math.cos(p) + dyw * math.sin(p), -dxw * math.sin(p) + dyw * math.cos(p)
+
+    def _sat(self, d):
+        dmax = min(self.P["vmax"] * self.th, self.dnorm)   # dominio de la red
+        n = math.hypot(d[0], d[1])
+        if n > dmax:
+            d[:2] *= dmax / n
+            self.n_sat += 1
+        d[2] = float(np.clip(d[2], -self.P["wmax"] * self.th, self.P["wmax"] * self.th))
+        return d
+
+    def _nn(self, d):
+        vl = np.concatenate(self.vhist[:self.na])
+        return self.model.predict(np.concatenate([d, vl])[None, :])[0]
+
+    def _loop(self):
+        nxt, t0 = time.perf_counter(), time.perf_counter()
+        P, tr = self.P, self.traj
+        while self.running:
+            s = self.bot.observe()
+            self.state = s
+            v = np.array([s["vbx"], s["vby"], s["wz"]])
+            self.vhist.insert(0, v)
+            del self.vhist[10:]
+            while len(self.vhist) < self.na:
+                self.vhist.append(v)
+
+            if self.mode != "IDLE" and (not s["link"] or s["age"] > P["age_max"]):
+                self.stop(f"watchdog (link={s['link']} age={s['age']*1000:.0f} ms)")
+
+            d, e = np.zeros(3), float("nan")
+            xr, yr = s["x"], s["y"]
+            if self.mode == "INICIO":
+                xr, yr = tr["x"][0], tr["y"][0]
+                e = math.hypot(xr - s["x"], yr - s["y"])
+                dxb, dyb = self._to_body(xr - s["x"], yr - s["y"], s["yaw"])
+                d = np.array([P["kp"] * dxb, P["kp"] * dyb,
+                              -P["kp_yaw"] * wrap180(s["yaw"])])
+                if (e < P["tol_ini"] and abs(wrap180(s["yaw"])) < 3.0) or \
+                        time.perf_counter() - self.t_ini > P["t_ini_max"]:
+                    dbg(f"inicio alcanzado (e={e*100:.1f} cm) -> CIRCULO")
+                    self.mode, self.t_tr = "CIRCULO", time.perf_counter()
+                    self.errs = []
+            elif self.mode == "CIRCULO":
+                te = time.perf_counter() - self.t_tr
+                if te >= tr["T"]:
+                    r, mx = self.rmse()
+                    self.stop(f"fin  RMSE {r*100:.1f} cm  max {mx*100:.1f} cm  sat {self.n_sat}")
+                    dbg(self.status)
+                else:
+                    i = min(int(te * tr["fs"]), len(tr["t"]) - 1)
+                    j = min(i + int(self.th * tr["fs"]), len(tr["t"]) - 1)
+                    xr, yr = tr["x"][i], tr["y"][i]
+                    e = math.hypot(xr - s["x"], yr - s["y"])
+                    dxw = P["ff"] * (tr["x"][j] - xr) + P["kp"] * (xr - s["x"])
+                    dyw = P["ff"] * (tr["y"][j] - yr) + P["kp"] * (yr - s["y"])
+                    dxb, dyb = self._to_body(dxw, dyw, s["yaw"])
+                    d = np.array([dxb, dyb, -P["kp_yaw"] * wrap180(s["yaw"])])
+                    self.errs.append(e)
+            self.ref = (xr, yr, 0.0)
+
+            if self.mode == "IDLE":
+                u = np.zeros(3)
+            else:
+                d = self._sat(d)
+                try:
+                    u = self._nn(d)
+                except Exception as ex:
+                    dbg("inferencia:", ex)
+                    self.stop("error de inferencia")
+                    u = np.zeros(3)
+            u = np.array([np.clip(u[0], -P["vmax"], P["vmax"]),
+                          np.clip(u[1], -P["vmax"], P["vmax"]),
+                          np.clip(u[2], -P["wmax"], P["wmax"])])
+            dm = np.array([P["amax"], P["amax"], P["amax_ang"]]) * CTRL_DT
+            u = self.u_prev + np.clip(u - self.u_prev, -dm, dm)
+            self.u_prev = u
+            self.u_out = (0.0 if abs(u[0]) < 0.015 else float(u[0]),
+                          0.0 if abs(u[1]) < 0.015 else float(u[1]),
+                          0.0 if abs(u[2]) < 1.0 else float(u[2]))
+            if self.mode != "IDLE":
+                with self.lock:
+                    self.log.append([time.perf_counter() - t0, self.mode,
+                                     *self.u_out, *d, s["x"], s["y"], s["yaw"],
+                                     xr, yr, e, s["vbx"], s["vby"], s["wz"]])
+                    if len(self.log) % 5 == 0:
+                        self.trail.append((s["x"], s["y"]))
+            nxt += CTRL_DT
+            sl = nxt - time.perf_counter()
+            if sl > 0:
+                time.sleep(sl)
+            else:
+                nxt = time.perf_counter()
+
+    def _sender(self):
+        per = 1.0 / CMD_HZ
+        while self.running:
+            try:
+                self.bot.cmd(*self.u_out)
+            except Exception as ex:
+                dbg("envio:", ex)
+            time.sleep(per)
+
+    def export(self, path):
+        with self.lock:
+            rows = list(self.log)
+        pd.DataFrame(rows, columns=["t", "mode", "ux", "uy", "uz", "dx_b", "dy_b",
+                                    "dyaw", "x", "y", "yaw", "x_ref", "y_ref",
+                                    "e_pos", "vbx", "vby", "wz"]).to_csv(path, index=False)
+        return len(rows)
+
+
+# ======================== interfaz ========================
+def gui():
+    import tkinter as tk
+    from tkinter import ttk, filedialog, messagebox
+    import matplotlib
+    matplotlib.use("TkAgg")
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+    root = tk.Tk()
+    root.title(f"Control inverso - circulo  ({VERSION})")
+    S = dict(vic=None, cmd=None, sync=None, model=None, meta=None,
+             bot=None, ctl=None, stop_train=False)
+    traj = circulo(**CIRC)
+
+    left = ttk.Frame(root, padding=8)
+    left.pack(side="left", fill="y")
+    lbl = {}
+
+    def sec(t, parent=None):
+        f = ttk.LabelFrame(parent or left, text=t, padding=6)
+        f.pack(fill="x", pady=3)
+        return f
+
+    def info(f, key):
+        lbl[key] = ttk.Label(f, text="-", font=("Consolas", 8), justify="left")
+        lbl[key].pack(anchor="w")
+
+    nb = ttk.Notebook(root)
+    nb.pack(side="left", fill="both", expand=True)
+    tab1, tab2 = ttk.Frame(nb), ttk.Frame(nb)
+    nb.add(tab1, text="Control")
+    nb.add(tab2, text="Validacion Vicon")
+
+    fig = Figure(figsize=(8.5, 6.2), dpi=88)
+    gs = fig.add_gridspec(3, 2, width_ratios=[1, 1.4])
+    ax_u = [fig.add_subplot(gs[i, 0]) for i in range(3)]
+    ax_xy = fig.add_subplot(gs[:, 1])
+    cv = FigureCanvasTkAgg(fig, master=tab1)
+    cv.get_tk_widget().pack(fill="both", expand=True)
+
+    fig_v = Figure(figsize=(8.5, 6.2), dpi=88)
+    fig_v.text(0.5, 0.5, "Carga el CSV de Vicon de la corrida y el log del robot\n"
+               "(seccion 4) y pulsa Comparar", ha="center", va="center", color="#7f8c8d")
+    left_v = ttk.Frame(tab2, padding=8)
+    left_v.pack(side="left", fill="y")
+    cv_v = FigureCanvasTkAgg(fig_v, master=tab2)
+    cv_v.get_tk_widget().pack(side="left", fill="both", expand=True)
+
+    def err(t, e):
+        dbg(f"{t}: {e}\n{traceback.format_exc()}")
+        messagebox.showerror(t, f"{type(e).__name__}: {e}")
+
+    # --- 1. datos ---
+    f = sec("1. Datos de entrenamiento")
+
+    def pick(kind):
+        p = filedialog.askopenfilename(filetypes=[("CSV", "*.csv"), ("Todos", "*.*")])
+        if not p:
+            return
+        try:
+            S[kind] = load_vicon(p) if kind == "vic" else load_cmds(p)
+            lbl[kind].config(text=f"{os.path.basename(p)}  n={S[kind]['n']}")
+        except Exception as e:
+            err("Carga", e)
+
+    ttk.Button(f, text="CSV Vicon...", command=lambda: pick("vic")).pack(fill="x")
+    info(f, "vic")
+    ttk.Button(f, text="CSV comandos / log...", command=lambda: pick("cmd")).pack(fill="x")
+    info(f, "cmd")
+
+    def do_sync():
+        if not (S["vic"] and S["cmd"]):
+            return messagebox.showinfo("Sincronia", "Carga ambos CSV.")
+        try:
+            s = S["sync"] = sincronizar(S["vic"], S["cmd"])
+            fr = s["frame"]
+            bad = any(g <= 0 for g in s["gains"]) or min(s["corrs"]) < 0.6
+            lbl["sync"].config(
+                text=(f"retardo {fr['d']*10:.0f} ms  s={fr['s']:+d}  "
+                      f"off={math.degrees(fr['off']):+.0f}\n"
+                      f"gan  {np.round(s['gains'],2).tolist()}\n"
+                      f"corr {np.round(s['corrs'],2).tolist()}"
+                      + ("\n*** revisar sincronia ***" if bad else "")),
+                foreground="#c0392b" if bad else "#000")
+            for i, n in enumerate(["vbx", "vby", "wz"]):
+                ax_u[i].clear()
+                ax_u[i].plot(s["t"], s["U"][:, i], lw=.8, label="u")
+                ax_u[i].plot(s["t"], s["V"][:, i], lw=.8, label="vicon")
+                ax_u[i].set_title(f"{n}  corr {s['corrs'][i]:.2f}", fontsize=8)
+                ax_u[i].tick_params(labelsize=6)
+            ax_u[0].legend(fontsize=6)
+            fig.tight_layout()
+            cv.draw_idle()
+        except Exception as e:
+            err("Sincronia", e)
+
+    ttk.Button(f, text="Sincronizar (AUTO)", command=do_sync).pack(fill="x", pady=(4, 0))
+    info(f, "sync")
+
+    # --- 2. red inversa ---
+    f = sec("2. Red inversa (na=3, Th=0.5, 16-12)")
+    lbl_tr = tk.StringVar(value="-")
+
+    def worker():
+        try:
+            def cb(ep, tr_, va):
+                lbl_tr.set(f"epoca {ep}  train {tr_:.5f}  val {va:.5f}")
+            m, meta, res = entrenar(S["sync"], cb=cb, stop=lambda: S["stop_train"])
+            S["model"], S["meta"] = m, meta
+            root.after(0, show_train, meta, res)
+        except Exception as e:
+            root.after(0, err, "Entrenamiento", e)
+
+    def show_train(meta, res):
+        r2 = meta["r2"]
+        lbl["model"].config(
+            text=(f"R2   {np.round(r2,3).tolist()}\n"
+                  f"base {np.round(meta['r2_base'],3).tolist()}\n"
+                  f"lin  {np.round(meta['r2_lin'],3).tolist()}\n"
+                  + ("RED OK" if meta["ok"] else "*** RED RECHAZADA (R2<0.90) ***")),
+            foreground="#27ae60" if meta["ok"] else "#c0392b")
+        n = min(400, len(res["Yv"]))
+        for i, nm in enumerate(["ux", "uy", "uz"]):
+            ax_u[i].clear()
+            ax_u[i].plot(res["Yv"][:n, i], lw=.8, label="real")
+            ax_u[i].plot(res["Yp"][:n, i], lw=.8, label="RNA")
+            ax_u[i].set_title(f"{nm}  R2 {r2[i]:.3f}", fontsize=8)
+            ax_u[i].tick_params(labelsize=6)
+        ax_u[0].legend(fontsize=6)
+        fig.tight_layout()
+        cv.draw_idle()
+
+    def do_train():
+        if not S["sync"]:
+            return messagebox.showinfo("Entrenar", "Sincroniza primero.")
+        S["stop_train"] = False
+        threading.Thread(target=worker, daemon=True).start()
+
+    ttk.Button(f, text="Entrenar", command=do_train).pack(fill="x")
+    ttk.Button(f, text="Detener", command=lambda: S.update(stop_train=True)).pack(fill="x")
+    ttk.Label(f, textvariable=lbl_tr, font=("Consolas", 8)).pack(anchor="w")
+    info(f, "model")
+
+    def save_m():
+        if S["model"]:
+            p = filedialog.asksaveasfilename(defaultextension=".npz",
+                                             initialfile="invdist_na3_th0.50.npz")
+            if p:
+                S["model"].save(p, S["meta"])
+
+    def load_m():
+        p = filedialog.askopenfilename(filetypes=[("NPZ", "*.npz")])
+        if not p:
+            return
+        m, meta = MLP.load(p)
+        if meta.get("scheme") != SCHEME or not meta.get("dist") \
+                or meta.get("n_in") != 3 + 3 * int(meta["na"]):
+            return messagebox.showerror("Modelo", "No es un modelo inv_dist_v4.")
+        S["model"], S["meta"] = m, meta
+        lbl["model"].config(text=f"{os.path.basename(p)}\nR2 {np.round(meta.get('r2',[]),3).tolist()}",
+                            foreground="#000")
+
+    row = ttk.Frame(f)
+    row.pack(fill="x")
+    ttk.Button(row, text="Guardar .npz", command=save_m).pack(side="left", expand=True, fill="x")
+    ttk.Button(row, text="Cargar .npz", command=load_m).pack(side="left", expand=True, fill="x")
+
+    # --- 3. ejecucion ---
+    f = sec("3. Circulo con control inverso")
+    ttk.Label(f, font=("Consolas", 8), justify="left", text=(
+        f"x = {CIRC['cx']} + {CIRC['R']} sin({CIRC['w']} t)\n"
+        f"y = {CIRC['cy']} + {CIRC['R']} cos({CIRC['w']} t)\n"
+        f"{CIRC['vueltas']} vueltas  T={traj['T']:.1f}s  v={traj['vpk']:.2f} m/s")).pack(anchor="w")
+    conn = tk.StringVar(value="sim")
+    row = ttk.Frame(f)
+    row.pack(fill="x", pady=3)
+    ttk.Combobox(row, textvariable=conn, values=["sim", "robot"], width=6,
+                 state="readonly").pack(side="left")
+
+    def toggle():
+        if S["bot"] is None:
+            if not S["model"]:
+                return messagebox.showinfo("Conectar", "Entrena o carga una red primero.")
+            try:
+                S["bot"] = SimChassis() if conn.get() == "sim" else TextChassis()
+                S["ctl"] = InvController(S["bot"], S["model"], S["meta"], traj)
+                b_conn.config(text="Desconectar")
+            except Exception as e:
+                S["bot"] = None
+                err("Conexion", e)
+        else:
+            S["ctl"].close()
+            S["bot"].close()
+            S["bot"] = S["ctl"] = None
+            b_conn.config(text="Conectar")
+
+    b_conn = ttk.Button(row, text="Conectar", command=toggle)
+    b_conn.pack(side="left", padx=4)
+
+    def run():
+        if not S["ctl"]:
+            return
+        if not S["meta"].get("ok", True) and not messagebox.askyesno(
+                "Red", "La red no pasa R2>0.90. Ejecutar de todos modos?"):
+            return
+        if traj["vpk"] > CTRL["vmax"]:
+            return messagebox.showerror("Circulo", "v pico > v max")
+        S["ctl"].iniciar()
+
+    tk.Button(f, text="EJECUTAR CIRCULO", command=run, bg="#8e44ad", fg="white",
+              font=("Segoe UI", 10, "bold")).pack(fill="x")
+    tk.Button(f, text="STOP [espacio]", bg="#c0392b", fg="white",
+              font=("Segoe UI", 10, "bold"),
+              command=lambda: S["ctl"] and S["ctl"].stop()).pack(fill="x", pady=3)
+    root.bind("<space>", lambda ev: S["ctl"] and S["ctl"].stop())
+
+    def export():
+        if S["ctl"]:
+            p = filedialog.asksaveasfilename(defaultextension=".csv",
+                                             initialfile=f"circulo_inv_{int(time.time())}.csv")
+            if p:
+                n = S["ctl"].export(p)
+                messagebox.showinfo("Log", f"{n} filas")
+
+    ttk.Button(f, text="Exportar log CSV", command=export).pack(fill="x")
+    info(f, "run")
+
+    # --- 4. validacion Vicon ---
+    f = sec("4. Validacion con Vicon", left_v)
+    V = dict(vic=None, log=None, res=None)
+
+    def pick_val(kind):
+        p = filedialog.askopenfilename(filetypes=[("CSV", "*.csv"), ("Todos", "*.*")])
+        if not p:
+            return
+        try:
+            V[kind] = load_vicon(p) if kind == "vic" else load_runlog(p)
+            n = V[kind]["n"] if kind == "vic" else len(V[kind])
+            lbl["v" + kind].config(text=f"{os.path.basename(p)}  n={n}")
+        except Exception as e:
+            err("Carga", e)
+
+    def use_current():
+        c = S["ctl"]
+        if not c or not c.log:
+            return messagebox.showinfo("Log", "No hay corrida en memoria.")
+        with c.lock:
+            rows = list(c.log)
+        V["log"] = pd.DataFrame(rows, columns=["t", "mode", "ux", "uy", "uz", "dx_b",
+                                               "dy_b", "dyaw", "x", "y", "yaw", "x_ref",
+                                               "y_ref", "e_pos", "vbx", "vby", "wz"])
+        lbl["vlog"].config(text=f"corrida actual  n={len(rows)}")
+
+    ttk.Button(f, text="CSV Vicon de la corrida...",
+               command=lambda: pick_val("vic")).pack(fill="x")
+    info(f, "vvic")
+    row = ttk.Frame(f)
+    row.pack(fill="x")
+    ttk.Button(row, text="Log robot...", command=lambda: pick_val("log"))\
+        .pack(side="left", expand=True, fill="x")
+    ttk.Button(row, text="Usar corrida actual", command=use_current)\
+        .pack(side="left", expand=True, fill="x")
+    info(f, "vlog")
+    ven = tk.StringVar(value="inicio")
+    solo = tk.BooleanVar(value=True)
+    row = ttk.Frame(f)
+    row.pack(fill="x", pady=2)
+    ttk.Label(row, text="ajuste:").pack(side="left")
+    ttk.Combobox(row, textvariable=ven, values=["inicio", "completa"], width=9,
+                 state="readonly").pack(side="left")
+    ttk.Checkbutton(row, text="solo circulo", variable=solo).pack(side="left", padx=4)
+
+    def comparar():
+        if V["vic"] is None or V["log"] is None:
+            return messagebox.showinfo("Validacion", "Carga el CSV de Vicon y el log.")
+        try:
+            r = V["res"] = validar_vicon(V["vic"], V["log"], ven.get(), solo.get())
+            plot_validacion(fig_v, r, traj)
+            cv_v.draw_idle()
+            nb.select(tab2)
+            warn = r["ncc"] < 0.7 or r["res_fit"] > 0.05
+            lbl["val"].config(
+                text=(f"retardo Vicon {r['lag']:.2f} s  NCC {r['ncc']:.2f}\n"
+                      f"s={r['s']:+d}  rot {r['theta']:+.1f}  off yaw {r['off']:+.1f}\n"
+                      f"residuo ajuste {r['res_fit']*100:.1f} cm\n"
+                      f"RMSE Vicon-ref {r.get('rms_vr', float('nan'))*100:.1f} cm "
+                      f"(max {r.get('max_vr', float('nan'))*100:.1f})\n"
+                      f"RMSE odom-ref  {r.get('rms_or', float('nan'))*100:.1f} cm\n"
+                      f"RMSE Vicon-odom {r['rms_vo']*100:.1f} cm\n"
+                      f"RMSE yaw {r['rms_yaw']:.1f} deg"
+                      + ("\n*** alineacion dudosa ***" if warn else "")),
+                foreground="#c0392b" if warn else "#000")
+        except Exception as e:
+            err("Validacion", e)
+
+    ttk.Button(f, text="Comparar", command=comparar).pack(fill="x")
+
+    def save_fig():
+        if V["res"] is None:
+            return
+        p = filedialog.asksaveasfilename(defaultextension=".png",
+                                         initialfile="validacion_vicon.png")
+        if p:
+            fig_v.savefig(p, dpi=200)
+
+    ttk.Button(f, text="Guardar figura PNG", command=save_fig).pack(fill="x")
+    info(f, "val")
+
+    def refresh():
+        c = S["ctl"]
+        ax_xy.clear()
+        ax_xy.plot(traj["y"], traj["x"], color="#f39c12", lw=2, label="referencia")
+        if c:
+            s = c.state
+            if len(c.trail) > 1:
+                t = np.array(c.trail)
+                ax_xy.plot(t[:, 1], t[:, 0], color="#2e86de", lw=1.5, label="robot")
+            ax_xy.plot(s["y"], s["x"], "o", color="#8e44ad")
+            ax_xy.plot(c.ref[1], c.ref[0], "x", color="#e74c3c")
+            r, mx = c.rmse()
+            lbl["run"].config(text=(f"modo {c.mode}\n{c.status}\n"
+                                    f"x {s['x']:+.3f} y {s['y']:+.3f} yaw {s['yaw']:+.1f}\n"
+                                    f"u {np.round(c.u_out,2).tolist()}\n"
+                                    f"RMSE {r*100:.1f} cm  max {mx*100:.1f}  sat {c.n_sat}"))
+        ax_xy.set_xlabel("y [m] (derecha +)", fontsize=8)
+        ax_xy.set_ylabel("x [m] (adelante +)", fontsize=8)
+        ax_xy.axis("equal")
+        ax_xy.grid(alpha=.3)
+        ax_xy.legend(fontsize=7, loc="upper right")
+        cv.draw_idle()
+        root.after(200, refresh)
+
+    def on_close():
+        if S["ctl"]:
+            S["ctl"].close()
+        if S["bot"]:
+            S["bot"].close()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
+    refresh()
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    gui()
