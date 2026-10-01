@@ -122,12 +122,9 @@ $ibero-text: #4A4543;
 }
 
 
-/* Mantener blanco al pasar el cursor */
-
 .site-title:hover,
 .site-title:focus {
   color: #ffffff !important;
-
   text-decoration: none !important;
 }
 
@@ -137,11 +134,12 @@ $ibero-text: #4A4543;
    ========================================================= */
 
 /*
-   Este logo proviene de:
+   El logo se inserta desde:
 
    _includes/title.html
 
-   mediante la clase:
+   usando la clase:
+
    .ibero-header-logo
 */
 
@@ -259,7 +257,8 @@ $ibero-text: #4A4543;
 
 /*
    Cerrada por defecto tanto en computadora como en celular.
-   Just the Docs agrega la clase .nav-open cuando se pulsa ☰.
+
+   Just the Docs agrega la clase .nav-open al pulsar ☰.
 */
 
 .site-nav {
@@ -311,7 +310,7 @@ $ibero-text: #4A4543;
 .nav-list {
   width: 100%;
 
-  max-width: 1200px;
+  max-width: 1120px;
 
   margin: 0 auto !important;
 
@@ -362,13 +361,8 @@ $ibero-text: #4A4543;
 
 
 /* =========================================================
-   FOOTER INTERNO DE LA BARRA LATERAL
+   FOOTER INTERNO DE LA NAVEGACIÓN
    ========================================================= */
-
-/*
-   Just the Docs coloca información del tema debajo del menú.
-   La ocultamos para mantener la navegación limpia.
-*/
 
 .side-bar .site-footer {
   display: none !important;
@@ -415,7 +409,7 @@ $ibero-text: #4A4543;
 .main-content-wrap {
   width: 100% !important;
 
-  max-width: 1240px !important;
+  max-width: 1120px !important;
 
   margin: 0 auto !important;
 
@@ -485,6 +479,8 @@ $ibero-text: #4A4543;
   color: $ibero-gray;
 
   font-weight: 650;
+
+  margin-top: 1.75rem;
 }
 
 
@@ -518,6 +514,13 @@ $ibero-text: #4A4543;
 }
 
 
+/* Separación de párrafos */
+
+.main-content p {
+  margin-bottom: 1rem;
+}
+
+
 /* =========================================================
    ENLACES
    ========================================================= */
@@ -526,6 +529,10 @@ $ibero-text: #4A4543;
   color: $ibero-red;
 
   text-decoration-color: rgba(238, 61, 66, 0.35);
+
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
 }
 
 
@@ -542,6 +549,9 @@ $ibero-text: #4A4543;
 
 .main-content table {
   width: 100%;
+
+  border-collapse: separate;
+  border-spacing: 0;
 
   border-radius: 7px;
 
@@ -594,6 +604,8 @@ $ibero-text: #4A4543;
   border-radius: 8px;
 
   padding: 1rem;
+
+  box-sizing: border-box;
 }
 
 
@@ -648,6 +660,28 @@ $ibero-text: #4A4543;
 
   margin-top: 2rem;
   margin-bottom: 2rem;
+}
+
+
+/* =========================================================
+   CITAS / NOTAS
+   ========================================================= */
+
+.main-content blockquote {
+  margin-left: 0;
+  margin-right: 0;
+
+  padding:
+    0.8rem
+    1rem;
+
+  color: $ibero-text;
+
+  background-color: #FAF9F8;
+
+  border-left: 4px solid $ibero-red;
+
+  border-radius: 0 6px 6px 0;
 }
 
 
@@ -710,8 +744,8 @@ h4:hover .anchor-heading {
    ========================================================= */
 
 /*
-   Estas reglas se conservan en caso de volver a activar
-   search_enabled en _config.yml.
+   Estas reglas se conservan por si search_enabled
+   vuelve a activarse en _config.yml.
 */
 
 .search-input {
@@ -750,10 +784,14 @@ h4:hover .anchor-heading {
    FOOTER GENERAL
    ========================================================= */
 
-.site-footer {
-  color: $ibero-gray;
+/*
+   Oculta:
 
-  font-size: 0.85rem;
+   "This site uses Just the Docs..."
+*/
+
+.site-footer {
+  display: none !important;
 }
 
 
@@ -762,7 +800,8 @@ h4:hover .anchor-heading {
    ========================================================= */
 
 /*
-   Evita que ecuaciones largas rompan el diseño en celular.
+   Evita que ecuaciones largas rompan el diseño
+   en dispositivos pequeños.
 */
 
 .MathJax,
@@ -1010,19 +1049,24 @@ mjx-container {
    ========================================================= */
 
 /*
-   Mantiene el contenido centrado y evita líneas de texto
-   excesivamente largas en monitores grandes.
+   Mantiene una longitud de línea cómoda incluso en
+   monitores grandes.
 */
 
 @media (min-width: 90rem) {
 
   .main-content-wrap {
-    max-width: 1320px !important;
+    max-width: 1180px !important;
   }
 
 
   .main-content {
     padding-left: 3rem !important;
     padding-right: 3rem !important;
+  }
+
+
+  .nav-list {
+    max-width: 1180px;
   }
 }
