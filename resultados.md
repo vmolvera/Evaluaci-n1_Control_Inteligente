@@ -244,7 +244,7 @@ El objetivo de esta prueba fue comparar simultáneamente:
 
 La comparación permite evaluar tanto el desempeño respecto a la referencia como la correspondencia entre la odometría interna del robot y una medición externa independiente.
 
-![Validación experimental mediante VICON]({{ '/assets/images/validacion_vicon.png' | relative_url }})
+![Resultado de validación Vicon]({{ '/assets/images/validacion_vicon.jpeg' | relative_url }})
 
 *Figura 2. Validación experimental del seguimiento circular mediante comparación entre referencia, odometría y sistema VICON.*
 
