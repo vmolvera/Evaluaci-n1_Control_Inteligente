@@ -9,7 +9,7 @@ logo: "/assets/images/logo.png"
 url: "https://vmolvera.github.io"
 baseurl: "/Evaluaci-n1_Control_Inteligente"
 
-search_enabled: true
+search_enabled: false
 heading_anchors: true
 nav_enabled: true
 
