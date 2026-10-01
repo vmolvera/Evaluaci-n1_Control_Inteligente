@@ -12,7 +12,7 @@ nav_order: 1
 
 Este portafolio digital documenta el desarrollo, implementación y validación experimental de un sistema de **Control Inteligente mediante Redes Neuronales Artificiales (RNA)** aplicado al robot móvil omnidireccional **DJI RoboMaster S1**.
 
-El proyecto integra la adquisición experimental de información mediante el sistema de captura de movimiento **VICON**, el procesamiento y sincronización de los datos, la caracterización neuronal del comportamiento del robot y el desarrollo de un **controlador neuronal** para realizar control de posición y seguimiento de trayectorias en el plano cartesiano.
+El proyecto integra la adquisición experimental de información mediante el sistema de captura de movimiento **VICON**, el procesamiento y sincronización de los datos, el desarrollo de un **modelo neuronal directo para la caracterización dinámica del robot** y un **modelo neuronal inverso orientado al control**, utilizado posteriormente para realizar control de posición, orientación y seguimiento de trayectoria.
 
 ---
 
@@ -24,8 +24,8 @@ El proyecto integra la adquisición experimental de información mediante el sis
 | Evaluación | Evaluación I |
 | Plataforma | DJI RoboMaster S1 |
 | Sistema de medición | VICON |
-| Desarrollo | Python, Matlab |
-| Técnica de control | Red Neuronal Artificial - Control Inverso |
+| Desarrollo | Python, MATLAB |
+| Modelos neuronales | Modelo directo y modelo inverso |
 | Periodo | Otoño 2026 |
 
 ---
@@ -34,7 +34,7 @@ El proyecto integra la adquisición experimental de información mediante el sis
 
 Como evidencia del funcionamiento del sistema desarrollado, se realizó una prueba física del **DJI RoboMaster S1** utilizando el controlador neuronal implementado.
 
-En el video se observa la ejecución del controlador y el seguimiento de la trayectoria realizada por el robot durante la validación experimental.
+En el video se observa la ejecución del controlador y el seguimiento de la trayectoria realizado por el robot durante la validación experimental.
 
 **[▶ Ver video de la prueba experimental](TU_ENLACE)**
 
@@ -44,9 +44,9 @@ En el video se observa la ejecución del controlador y el seguimiento de la tray
 
 El desarrollo de la evaluación comprende tres etapas principales:
 
-1. **Caracterización del robot mediante una RNA.**
-2. **Control de posición y orientación.**
-3. **Seguimiento de una trayectoria variante en el tiempo.**
+1. **Caracterización del comportamiento dinámico del RoboMaster mediante una RNA.**
+2. **Control de posición y orientación mediante el modelo neuronal inverso.**
+3. **Seguimiento de una trayectoria cartesiana variante en el tiempo.**
 
 ---
 
@@ -56,7 +56,7 @@ El sistema utilizado está compuesto por:
 
 - **DJI RoboMaster S1** como plataforma robótica móvil.
 - **Sistema de captura de movimiento VICON** para medición de posición y orientación.
-- Computadora para adquisición, procesamiento y control.
+- Computadora para adquisición, procesamiento, entrenamiento y control.
 - Comunicación con el RoboMaster mediante red Wi-Fi.
 - Interfaz gráfica para entrenamiento, ejecución y supervisión del controlador.
 
@@ -68,39 +68,52 @@ El procedimiento desarrollado sigue la secuencia:
 
 ```text
 DJI RoboMaster S1 + VICON
-            ↓
-   Adquisición experimental
-            ↓
- Procesamiento y sincronización
-            ↓
- Caracterización neuronal
-            ↓
-     RNA de control inverso
-            ↓
+        ↓
+Adquisición experimental
+        ↓
+Procesamiento y sincronización
+        ↓
+Modelos neuronales
+   ├── Modelo directo
+   └── Modelo inverso
+        ↓
 Control de posición y orientación
-            ↓
- Seguimiento de trayectoria
-            ↓
-   Validación experimental
+        ↓
+Seguimiento de trayectoria
+        ↓
+Validación experimental mediante VICON
 ```
 
 ---
 
 ## Resultados principales
 
-Durante la validación de la Red Neuronal Artificial inversa se obtuvieron aproximadamente:
+El sistema fue evaluado tanto a nivel neuronal como durante la ejecución física del controlador.
+
+### Validación del modelo neuronal inverso
 
 | Variable | Resultado |
 |---|---:|
 | $R^2$ para $u_x$ | 0.994 |
 | $R^2$ para $u_y$ | 0.992 |
 | $R^2$ para $u_z$ | 0.993 |
-| RMSE de trayectoria | 5.6 cm |
-| Error máximo | 14.3 cm |
+
+Los valores obtenidos muestran una elevada correspondencia entre los **pulsos experimentales** y los pulsos estimados por la RNA inversa durante la etapa de validación.
+
+### Validación experimental mediante VICON
+
+| Métrica | Resultado aproximado |
+|---|---:|
+| RMSE VICON - referencia | 5.2 cm |
+| RMSE odometría - referencia | 5.2 cm |
+| RMSE VICON - odometría | 0.9 cm |
+| RMSE de orientación | 0.3° |
 | Trayectoria evaluada | Círculo |
 | Vueltas realizadas | 2 |
 
-Los resultados muestran una elevada correspondencia entre los pulsos experimentales y las salidas calculadas por la RNA durante la etapa de validación, así como la capacidad del controlador para ejecutar físicamente la trayectoria circular.
+La validación externa mediante **VICON** permitió comparar la trayectoria de referencia con la odometría del RoboMaster y con una medición independiente del movimiento real.
+
+Los resultados detallados de las diferentes corridas experimentales se presentan en la sección **8. Resultados Experimentales**.
 
 ---
 
@@ -110,9 +123,3 @@ Los resultados muestran una elevada correspondencia entre los pulsos experimenta
 - Carlos Sebastián Ortega Hernández
 - Víctor Manuel Olvera de la Cruz
 - Rodrigo Cruz Bartolo
-
----
-
-## Navegación del portafolio
-
-El desarrollo completo del proyecto se encuentra documentado en las diferentes secciones del portafolio, desde la adquisición y procesamiento de datos hasta los resultados experimentales, evidencias, código fuente y conclusiones.
