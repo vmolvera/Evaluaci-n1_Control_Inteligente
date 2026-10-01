@@ -1,6 +1,11 @@
 /* =========================================================
    PORTAFOLIO CONTROL INTELIGENTE
    UNIVERSIDAD IBEROAMERICANA
+
+   Layout universal:
+   IBERO | Portafolio                         ☰
+   ---------------------------------------------------------
+                         CONTENIDO
    ========================================================= */
 
 
@@ -20,20 +25,71 @@ $ibero-text: #4A4543;
 
 
 /* =========================================================
+   RESET DEL LAYOUT DE JUST THE DOCS
+   ========================================================= */
+
+/*
+   Just the Docs cambia automáticamente a barra lateral
+   en pantallas grandes.
+
+   En este portafolio se elimina ese comportamiento para
+   utilizar la misma estructura horizontal en computadora,
+   tablet y celular.
+*/
+
+.side-bar {
+  position: relative !important;
+
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+
+  background-color: transparent !important;
+
+  border-right: none !important;
+  border-bottom: none !important;
+
+  overflow: visible !important;
+
+  z-index: 300;
+}
+
+
+/* =========================================================
    CABECERA SUPERIOR
    ========================================================= */
 
 .site-header {
-  background-color: $ibero-red !important;
-  border-bottom: none !important;
+  position: relative !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
 
   min-height: 94px;
 
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 
-  position: relative;
-  z-index: 300;
+  box-sizing: border-box;
+
+  padding: 0 2rem !important;
+
+  background-color: $ibero-red !important;
+
+  border: none !important;
+  border-bottom: none !important;
+
+  z-index: 400;
 }
 
 
@@ -45,7 +101,15 @@ $ibero-text: #4A4543;
   display: flex !important;
   align-items: center !important;
 
-  gap: 0.75rem;
+  flex: 1 1 auto !important;
+
+  min-width: 0 !important;
+  max-width: none !important;
+
+  gap: 0.85rem;
+
+  margin: 0 !important;
+  padding: 0 !important;
 
   color: #ffffff !important;
 
@@ -53,13 +117,17 @@ $ibero-text: #4A4543;
   letter-spacing: -0.3px;
 
   text-decoration: none !important;
+
+  overflow: visible !important;
 }
 
 
 /* Mantener blanco al pasar el cursor */
 
-.site-title:hover {
+.site-title:hover,
+.site-title:focus {
   color: #ffffff !important;
+
   text-decoration: none !important;
 }
 
@@ -68,34 +136,51 @@ $ibero-text: #4A4543;
    LOGO IBERO
    ========================================================= */
 
-.site-logo {
+/*
+   Este logo proviene de:
+
+   _includes/title.html
+
+   mediante la clase:
+   .ibero-header-logo
+*/
+
+.ibero-header-logo {
   display: block !important;
 
   width: 185px !important;
-  height: 72px !important;
-  min-width: 185px !important;
+  max-width: 185px !important;
 
-  flex: 0 0 185px !important;
+  height: auto !important;
+  max-height: 72px !important;
 
-  background-repeat: no-repeat !important;
-  background-position: left center !important;
-  background-size: contain !important;
+  object-fit: contain;
+  object-position: left center;
+
+  flex: 0 0 auto !important;
+
+  margin: 0 !important;
 }
 
 
 /* =========================================================
-   TEXTO "PORTAFOLIO" DESPUÉS DEL LOGO
+   TEXTO "| Portafolio"
    ========================================================= */
 
 .site-title::after {
   content: "| Portafolio";
 
+  display: inline-block;
+
   color: #ffffff;
 
-  font-size: 1.6rem;
+  font-size: 1.55rem;
   font-weight: 700;
+  line-height: 1;
 
   white-space: nowrap;
+
+  flex: 0 0 auto;
 }
 
 
@@ -103,23 +188,62 @@ $ibero-text: #4A4543;
    BOTÓN HAMBURGUESA
    ========================================================= */
 
+#menu-button,
 .site-button {
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex: 0 0 auto !important;
+
+  width: 48px !important;
+  height: 48px !important;
+
+  min-width: 48px !important;
+
+  margin: 0 0 0 1rem !important;
+  padding: 0 !important;
+
   color: #ffffff !important;
 
   opacity: 1 !important;
   visibility: visible !important;
+
+  background-color: transparent !important;
+
+  border: none !important;
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
 }
 
 
+#menu-button:hover,
 .site-button:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 
-/* Iconos */
+#menu-button:focus,
+.site-button:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -3px;
+}
+
+
+/* Icono hamburguesa */
 
 .site-header svg,
-.site-button svg {
+.site-button svg,
+#menu-button svg {
+  display: block;
+
+  width: 30px;
+  height: 30px;
+
   color: #ffffff !important;
 
   fill: currentColor !important;
@@ -130,22 +254,84 @@ $ibero-text: #4A4543;
 
 
 /* =========================================================
-   BARRA LATERAL
+   NAVEGACIÓN
    ========================================================= */
 
-.side-bar {
-  background-color: $ibero-light;
+/*
+   Cerrada por defecto tanto en computadora como en celular.
+   Just the Docs agrega la clase .nav-open cuando se pulsa ☰.
+*/
+
+.site-nav {
+  display: none !important;
+
+  position: relative !important;
+
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: auto !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+
+  padding: 1rem 1.5rem 1.25rem !important;
+
+  box-sizing: border-box;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  background-color: $ibero-light !important;
+
+  border: none !important;
+  border-bottom: 1px solid $ibero-border !important;
+
+  z-index: 350;
+}
+
+
+/* Menú abierto */
+
+.site-nav.nav-open {
+  display: block !important;
 }
 
 
 /* =========================================================
-   NAVEGACIÓN
+   LISTA DE NAVEGACIÓN
    ========================================================= */
 
+.nav-list {
+  width: 100%;
+
+  max-width: 1200px;
+
+  margin: 0 auto !important;
+
+  padding: 0 !important;
+}
+
+
+.nav-list .nav-list-item {
+  margin: 0.1rem 0;
+}
+
+
 .nav-list .nav-list-item .nav-list-link {
+  display: block;
+
+  padding: 0.65rem 0.85rem;
+
   color: #403B39;
 
-  border-radius: 5px;
+  border-radius: 6px;
 
   transition:
     background-color 0.15s ease,
@@ -159,6 +345,8 @@ $ibero-text: #4A4543;
   color: $ibero-red !important;
 
   background-color: rgba(238, 61, 66, 0.06);
+
+  text-decoration: none;
 }
 
 
@@ -174,112 +362,16 @@ $ibero-text: #4A4543;
 
 
 /* =========================================================
-   MENÚ PERMANENTE EN COMPUTADORA
+   FOOTER INTERNO DE LA BARRA LATERAL
    ========================================================= */
 
-@media (min-width: 66.5rem) {
+/*
+   Just the Docs coloca información del tema debajo del menú.
+   La ocultamos para mantener la navegación limpia.
+*/
 
-  .site-nav {
-    display: block !important;
-
-    visibility: visible !important;
-    opacity: 1 !important;
-
-    position: fixed !important;
-
-    top: 94px;
-    left: 0;
-    bottom: 0;
-
-    width: 285px !important;
-
-    padding:
-      1.25rem
-      0.8rem
-      2rem
-      0.8rem;
-
-    overflow-y: auto;
-
-    background-color: $ibero-light !important;
-
-    border-right: 1px solid $ibero-border;
-
-    z-index: 150;
-  }
-
-
-  /* Espacio para que el contenido no quede debajo del menú */
-
-  .main {
-    margin-left: 285px !important;
-  }
-
-
-  /* En escritorio no se necesita el botón hamburguesa */
-
-  #menu-button {
-    display: none !important;
-  }
-
-
-  /* Separación entre elementos del menú */
-
-  .nav-list {
-    padding-top: 0.25rem;
-  }
-
-
-  .nav-list .nav-list-item {
-    margin-bottom: 0.12rem;
-  }
-
-
-  .nav-list .nav-list-item .nav-list-link {
-    padding-top: 0.52rem;
-    padding-bottom: 0.52rem;
-  }
-}
-
-
-/* =========================================================
-   TABLET Y CELULAR
-   ========================================================= */
-
-@media (max-width: 66.49rem) {
-
-  .site-nav {
-    position: static !important;
-
-    width: auto !important;
-  }
-
-
-  /* Mostrar botón hamburguesa */
-
-  #menu-button {
-    display: flex !important;
-
-    color: #ffffff !important;
-
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-
-
-  #menu-button svg {
-    color: #ffffff !important;
-
-    fill: currentColor !important;
-    stroke: currentColor !important;
-  }
-
-
-  /* El contenido vuelve a ocupar todo el ancho */
-
-  .main {
-    margin-left: 0 !important;
-  }
+.side-bar .site-footer {
+  display: none !important;
 }
 
 
@@ -287,7 +379,66 @@ $ibero-text: #4A4543;
    CONTENIDO PRINCIPAL
    ========================================================= */
 
+.main {
+  position: relative !important;
+
+  width: 100% !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+  margin-left: 0 !important;
+
+  padding: 0 !important;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   CABECERA ORIGINAL DE JUST THE DOCS
+   ========================================================= */
+
+/*
+   Evita que aparezca una segunda barra horizontal
+   con el buscador encima del contenido.
+*/
+
+.main-header {
+  display: none !important;
+}
+
+
+/* =========================================================
+   CONTENEDOR DEL CONTENIDO
+   ========================================================= */
+
+.main-content-wrap {
+  width: 100% !important;
+
+  max-width: 1240px !important;
+
+  margin: 0 auto !important;
+
+  padding: 0 !important;
+
+  box-sizing: border-box;
+}
+
+
 .main-content {
+  width: 100%;
+
+  max-width: none !important;
+
+  margin: 0 auto !important;
+
+  padding:
+    2.5rem
+    2rem
+    4rem !important;
+
+  box-sizing: border-box;
+
   line-height: 1.7;
 
   color: $ibero-text;
@@ -304,6 +455,8 @@ $ibero-text: #4A4543;
   font-weight: 700;
 
   letter-spacing: -0.7px;
+
+  margin-top: 0.5rem;
 }
 
 
@@ -356,6 +509,16 @@ $ibero-text: #4A4543;
 
 
 /* =========================================================
+   PÁRRAFOS Y LISTAS
+   ========================================================= */
+
+.main-content p,
+.main-content li {
+  color: $ibero-text;
+}
+
+
+/* =========================================================
    ENLACES
    ========================================================= */
 
@@ -378,6 +541,8 @@ $ibero-text: #4A4543;
    ========================================================= */
 
 .main-content table {
+  width: 100%;
+
   border-radius: 7px;
 
   overflow: hidden;
@@ -385,8 +550,6 @@ $ibero-text: #4A4543;
   box-shadow:
     0 2px 8px
     rgba(0, 0, 0, 0.05);
-
-  width: 100%;
 }
 
 
@@ -422,6 +585,10 @@ $ibero-text: #4A4543;
    ========================================================= */
 
 .main-content pre {
+  max-width: 100%;
+
+  overflow-x: auto;
+
   border: 1px solid #DEDAD8;
 
   border-radius: 8px;
@@ -447,6 +614,9 @@ $ibero-text: #4A4543;
   max-width: 100%;
 
   height: auto;
+
+  margin-left: auto;
+  margin-right: auto;
 
   border-radius: 7px;
 }
@@ -539,6 +709,11 @@ h4:hover .anchor-heading {
    BÚSQUEDA
    ========================================================= */
 
+/*
+   Estas reglas se conservan en caso de volver a activar
+   search_enabled en _config.yml.
+*/
+
 .search-input {
   border-radius: 6px !important;
 }
@@ -572,7 +747,7 @@ h4:hover .anchor-heading {
 
 
 /* =========================================================
-   FOOTER
+   FOOTER GENERAL
    ========================================================= */
 
 .site-footer {
@@ -583,55 +758,134 @@ h4:hover .anchor-heading {
 
 
 /* =========================================================
-   AJUSTES PARA CELULAR
+   ECUACIONES
+   ========================================================= */
+
+/*
+   Evita que ecuaciones largas rompan el diseño en celular.
+*/
+
+.MathJax,
+mjx-container {
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+
+/* =========================================================
+   TABLET
    ========================================================= */
 
 @media (max-width: 50rem) {
 
-  /* Cabecera */
+  /* -----------------------------------------
+     Cabecera
+     ----------------------------------------- */
 
   .site-header {
     min-height: 80px;
+
+    padding:
+      0
+      1rem !important;
   }
 
 
-  /* Logo */
+  /* -----------------------------------------
+     Logo
+     ----------------------------------------- */
 
-  .site-logo {
+  .ibero-header-logo {
     width: 130px !important;
-    height: 51px !important;
-    min-width: 130px !important;
+    max-width: 130px !important;
 
-    flex: 0 0 130px !important;
-
-    background-repeat: no-repeat !important;
-    background-position: left center !important;
-    background-size: contain !important;
+    max-height: 52px !important;
   }
 
 
-  /* Texto Portafolio */
+  /* -----------------------------------------
+     Texto Portafolio
+     ----------------------------------------- */
+
+  .site-title {
+    gap: 0.6rem;
+  }
+
 
   .site-title::after {
     font-size: 1.15rem;
   }
 
 
-  /* Título principal */
+  /* -----------------------------------------
+     Hamburguesa
+     ----------------------------------------- */
+
+  #menu-button,
+  .site-button {
+    width: 44px !important;
+    height: 44px !important;
+
+    min-width: 44px !important;
+
+    margin-left: 0.5rem !important;
+  }
+
+
+  #menu-button svg,
+  .site-button svg {
+    width: 27px;
+    height: 27px;
+  }
+
+
+  /* -----------------------------------------
+     Navegación
+     ----------------------------------------- */
+
+  .site-nav {
+    padding:
+      0.75rem
+      0.75rem
+      1rem !important;
+  }
+
+
+  .nav-list .nav-list-item .nav-list-link {
+    padding:
+      0.6rem
+      0.7rem;
+  }
+
+
+  /* -----------------------------------------
+     Contenido
+     ----------------------------------------- */
+
+  .main-content {
+    padding:
+      2rem
+      1.25rem
+      3rem !important;
+
+    line-height: 1.6;
+  }
+
+
+  /* -----------------------------------------
+     Título principal
+     ----------------------------------------- */
 
   .main-content h1 {
     font-size: 2.2rem;
   }
 
 
-  /* Texto */
-
-  .main-content {
-    line-height: 1.6;
-  }
-
-
-  /* Tablas */
+  /* -----------------------------------------
+     Tablas
+     ----------------------------------------- */
 
   .main-content table {
     font-size: 0.9rem;
@@ -640,70 +894,135 @@ h4:hover .anchor-heading {
 
 
 /* =========================================================
-   AJUSTES PARA CELULARES PEQUEÑOS
+   CELULARES PEQUEÑOS
    ========================================================= */
 
 @media (max-width: 30rem) {
 
-  /* Logo */
+  /* -----------------------------------------
+     Cabecera
+     ----------------------------------------- */
 
-  .site-logo {
-    width: 105px !important;
-    height: 41px !important;
-    min-width: 105px !important;
+  .site-header {
+    min-height: 72px;
 
-    flex: 0 0 105px !important;
-
-    background-repeat: no-repeat !important;
-    background-position: left center !important;
-    background-size: contain !important;
+    padding:
+      0
+      0.75rem !important;
   }
 
 
-  /* Texto Portafolio */
+  /* -----------------------------------------
+     Logo
+     ----------------------------------------- */
+
+  .ibero-header-logo {
+    width: 105px !important;
+    max-width: 105px !important;
+
+    max-height: 44px !important;
+  }
+
+
+  /* -----------------------------------------
+     Título
+     ----------------------------------------- */
+
+  .site-title {
+    gap: 0.45rem;
+  }
+
 
   .site-title::after {
     font-size: 1rem;
   }
 
 
-  /* Título principal */
+  /* -----------------------------------------
+     Hamburguesa
+     ----------------------------------------- */
+
+  #menu-button,
+  .site-button {
+    width: 42px !important;
+    height: 42px !important;
+
+    min-width: 42px !important;
+
+    margin-left: 0.35rem !important;
+  }
+
+
+  #menu-button svg,
+  .site-button svg {
+    width: 25px;
+    height: 25px;
+  }
+
+
+  /* -----------------------------------------
+     Contenido
+     ----------------------------------------- */
+
+  .main-content {
+    padding:
+      1.75rem
+      1rem
+      2.5rem !important;
+  }
+
+
+  /* -----------------------------------------
+     Título principal
+     ----------------------------------------- */
 
   .main-content h1 {
     font-size: 1.9rem;
+  }
+
+
+  /* -----------------------------------------
+     Encabezados
+     ----------------------------------------- */
+
+  .main-content h2 {
+    font-size: 1.45rem;
+  }
+
+
+  .main-content h3 {
+    font-size: 1.15rem;
+  }
+
+
+  /* -----------------------------------------
+     Tablas
+     ----------------------------------------- */
+
+  .main-content table {
+    font-size: 0.82rem;
   }
 }
 
 
 /* =========================================================
-   LOGO IBERO - INSERCIÓN DIRECTA EN CABECERA
+   PANTALLAS MUY ANCHAS
    ========================================================= */
 
-.ibero-header-logo {
-  display: block !important;
+/*
+   Mantiene el contenido centrado y evita líneas de texto
+   excesivamente largas en monitores grandes.
+*/
 
-  width: 185px !important;
-  height: auto !important;
+@media (min-width: 90rem) {
 
-  max-height: 72px !important;
-
-  object-fit: contain;
-
-  flex-shrink: 0;
-}
-
-/* Tablet y celular */
-@media (max-width: 50rem) {
-  .ibero-header-logo {
-    width: 130px !important;
-    max-height: 52px !important;
+  .main-content-wrap {
+    max-width: 1320px !important;
   }
-}
 
-/* Celulares pequeños */
-@media (max-width: 30rem) {
-  .ibero-header-logo {
-    width: 105px !important;
-    max-height: 44px !important;
+
+  .main-content {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
   }
 }
