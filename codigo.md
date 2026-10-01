@@ -1,170 +1,95 @@
 ---
 layout: default
-title: 9. Código Fuente
-nav_order: 12
+title: 8. Código Fuente
+nav_order: 9
 permalink: /codigo/
 ---
 
 # Código Fuente
 
-En esta sección se presenta el código principal desarrollado para la implementación del sistema de control neuronal del DJI RoboMaster S1.
+En esta sección se presentan los principales archivos utilizados para la implementación y validación experimental del sistema de control neuronal del **DJI RoboMaster S1**.
 
-El programa integra las siguientes etapas desarrolladas:
-
-- Lectura de datos experimentales.
-- Procesamiento de información obtenida mediante VICON.
-- Sincronización automática de señales.
-- Construcción del conjunto de entrenamiento.
-- Entrenamiento de la RNA inversa.
-- Validación mediante el coeficiente ($R^2$).
-- Comunicación con el DJI RoboMaster S1.
-- Control de posición y orientación.
-- Seguimiento de trayectoria circular.
-- Registro de resultados.
-- Interfaz gráfica para supervisión y ejecución.
+El código, los datos experimentales y los archivos de validación se encuentran organizados dentro del repositorio para facilitar su consulta.
 
 ---
 
-## 11.1 Programa principal
+## 8.1 Programa principal
 
-El programa final utilizado durante la evaluación se encuentra disponible en el siguiente archivo:
+El programa principal utilizado durante las pruebas experimentales corresponde a:
 
-[**Ver código completo: control_inverso_circulo.txt**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente/blob/main/src/control_inverso_circulo.txt)
+[**Ver código completo: inv_circulo.py**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente/blob/main/src/inv_circulo.py)
 
-El archivo contiene la implementación completa utilizada para las pruebas experimentales.
+Este programa integra las funciones necesarias para:
+
+- Cargar y procesar los datos experimentales;
+- Entrenar y validar la RNA inversa;
+- Establecer comunicación con el RoboMaster;
+- Ejecutar el control de posición y orientación;
+- Realizar el seguimiento de una trayectoria;
+- Registrar los resultados de la prueba;
+- Realizar la validación experimental mediante VICON.
 
 ---
 
-## 11.2 Estructura general
+## 8.2 Datos experimentales
 
-El funcionamiento del programa puede resumirse mediante:
+Los registros utilizados durante el desarrollo y validación del sistema se encuentran en la carpeta:
 
 ```text
-Carga de datos
-      ↓
-Procesamiento
-      ↓
-Sincronización
-      ↓
-Construcción del dataset
-      ↓
-Entrenamiento RNA
-      ↓
-Validación
-      ↓
-Conexión con RoboMaster
-      ↓
-Control de posición
-      ↓
-Seguimiento circular
-      ↓
-Registro de resultados
+data/
 ```
 
----
+Los principales archivos son:
 
-## 11.3 Principales librerías utilizadas
+### Registro experimental
 
-El programa fue desarrollado en **Python** utilizando principalmente:
+[**modoguerradefinitivo.csv**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente/blob/main/data/modoguerradefinitivo.csv)
 
-```python
-numpy
-pandas
-scipy
-matplotlib
-tkinter
-socket
-threading
-```
+Archivo utilizado durante el desarrollo y entrenamiento del sistema neuronal.
 
-| Librería | Aplicación |
-|---|---|
-| NumPy | Operaciones numéricas y RNA |
-| Pandas | Lectura y procesamiento de datos CSV |
-| SciPy | Filtrado y procesamiento de señales |
-| Matplotlib | Visualización de resultados |
-| Tkinter | Interfaz gráfica |
-| Socket | Comunicación con el RoboMaster |
-| Threading | Ejecución concurrente |
+### Registro VICON
+
+[**vicon_tray2.csv**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente/blob/main/data/vicon_tray2.csv)
+
+Archivo correspondiente a las mediciones obtenidas mediante **VICON** durante las pruebas experimentales.
 
 ---
 
-## 11.4 Red Neuronal Artificial
+## 8.3 Organización de archivos
 
-El programa implementa una Red Neuronal Artificial, cuya arquitectura final para el control inverso es:
-
-$$
-\boxed{12-16-12-3}
-$$
-
-El entrenamiento incorpora:
-
-- Normalización de datos.
-- División entrenamiento-validación.
-- Mini-batches.
-- Retropropagación.
-- Optimizador Adam.
-- Weight decay.
-- Early stopping.
-- Evaluación mediante ($R^2$).
-
----
-
-## 11.5 Comunicación con el RoboMaster
-
-La comunicación con el robot se realiza mediante sockets.
-
-Los puertos utilizados son:
-
-| Función | Puerto |
-|---|---:|
-| Comandos TCP | 40923 |
-| Telemetría UDP | 40924 |
-
-Los pulsos generados por el controlador corresponden a:
-
-$$
-u_x,\quad u_y,\quad u_z
-$$
-
----
-
-## 11.6 Funciones principales del programa
-
-El código se encuentra dividido en diferentes bloques funcionales:
-
-1. Comunicación con el RoboMaster.
-2. Lectura de datos VICON.
-3. Lectura de comandos experimentales.
-4. Limpieza y filtrado de señales.
-5. Sincronización automática.
-6. Implementación de la MLP.
-7. Construcción del modelo inverso.
-8. Entrenamiento y validación.
-9. Generación de trayectoria.
-10. Control de posición.
-11. Seguimiento del círculo.
-12. Validación con VICON.
-13. Interfaz gráfica.
-
----
-
-## 11.7 Archivo del proyecto
-
-La estructura correspondiente al código dentro del repositorio es:
+La estructura principal utilizada dentro del repositorio es:
 
 ```text
 src/
 │
-└── control_inverso_circulo.txt
+└── inv_circulo.py
+
+data/
+│
+├── modoguerradefinitivo.csv
+└── vicon_tray2.csv
+
+assets/
+│
+└── images/
+    ├── resultado_control_inverso.jpeg
+    └── validacion_vicon.jpeg
 ```
 
-El archivo contiene el programa final utilizado para obtener los resultados presentados en este portafolio.
+Cada carpeta cumple una función específica:
+
+| Carpeta | Contenido |
+|---|---|
+| `src/` | Código fuente del sistema |
+| `data/` | Datos experimentales y registros VICON |
+| `assets/images/` | Figuras utilizadas para documentar los resultados |
 
 ---
 
-## 11.8 Repositorio completo
+## 8.4 Repositorio completo
 
-El proyecto completo se encuentra disponible en:
+Todos los archivos correspondientes al proyecto se encuentran disponibles en:
 
-[**Repositorio Evaluación 1 - Control Inteligente**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente)
+[**Repositorio Evaluación I - Control Inteligente**](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente)
+
+El repositorio contiene el código fuente, los datos experimentales, las figuras de resultados y los archivos utilizados para construir este portafolio digital.
