@@ -1,7 +1,7 @@
 ---
 layout: default
-title: 8. Resultados Experimentales
-nav_order: 9
+title: 7. Resultados Experimentales
+nav_order: 8
 permalink: /resultados/
 ---
 
@@ -16,7 +16,7 @@ El análisis de resultados se organizó en cuatro aspectos principales:
 
 ---
 
-## 8.1 Resultados de la sincronización
+## 7.1 Resultados de la sincronización
 
 Antes de realizar el entrenamiento neuronal fue necesario comprobar que los pulsos enviados al RoboMaster estuvieran correctamente alineados temporalmente con el movimiento observado.
 
@@ -40,7 +40,7 @@ La correcta sincronización de las señales fue fundamental para construir un co
 
 ---
 
-## 8.2 Entrenamiento de la RNA inversa
+## 7.2 Entrenamiento de la RNA inversa
 
 Una vez construido el conjunto de datos correspondiente al problema inverso, se realizó el entrenamiento de la Red Neuronal Artificial utilizada posteriormente dentro del controlador.
 
@@ -69,7 +69,7 @@ enviados posteriormente al chasis del RoboMaster.
 
 ---
 
-## 8.3 Evaluación de la RNA mediante $R^2$
+## 7.3 Evaluación de la RNA mediante $R^2$
 
 El desempeño del modelo neuronal inverso se evaluó mediante el coeficiente de determinación:
 
@@ -115,7 +115,7 @@ Estos resultados indican que la RNA fue capaz de representar con alta correspond
 
 ---
 
-## 8.4 Validación gráfica de la RNA inversa
+## 7.4 Validación gráfica de la RNA inversa
 
 La siguiente figura muestra la comparación entre los pulsos experimentales y los pulsos estimados por la RNA para los tres canales de salida.
 
@@ -131,7 +131,7 @@ Esta figura se utiliza principalmente como evidencia del **desempeño del modelo
 
 ---
 
-## 8.5 Seguimiento experimental de la trayectoria
+## 7.5 Seguimiento experimental de la trayectoria
 
 Después de validar la RNA inversa, el modelo fue incorporado al sistema de control para realizar el seguimiento de una trayectoria circular.
 
@@ -168,7 +168,7 @@ El sistema opera de manera realimentada, ya que el estado actual del robot se vu
 
 ---
 
-## 8.6 Comparación entre referencia y trayectoria ejecutada
+## 7.6 Comparación entre referencia y trayectoria ejecutada
 
 La trayectoria de referencia corresponde al círculo ideal definido matemáticamente.
 
@@ -194,7 +194,7 @@ Estas diferencias pueden asociarse a las condiciones reales de operación del si
 
 ---
 
-## 8.7 Error RMSE de trayectoria
+## 7.7 Error RMSE de trayectoria
 
 Para evaluar cuantitativamente el seguimiento se utilizó el **Root Mean Square Error (RMSE)** de posición.
 
@@ -232,7 +232,7 @@ A pesar de estas desviaciones, el controlador permitió completar la trayectoria
 
 ---
 
-## 8.8 Validación experimental mediante VICON
+## 7.8 Validación experimental mediante VICON
 
 Posteriormente se realizó una validación adicional utilizando el sistema de captura de movimiento **VICON** como fuente externa de medición.
 
@@ -250,7 +250,7 @@ La comparación permite evaluar tanto el desempeño respecto a la referencia com
 
 ---
 
-## 8.9 Resultados de la validación VICON
+## 7.9 Resultados de la validación VICON
 
 Durante la corrida mostrada en la Figura 2 se obtuvieron aproximadamente las siguientes métricas:
 
@@ -295,7 +295,7 @@ indicando también una elevada correspondencia angular durante la ejecución.
 
 ---
 
-## 8.10 Interpretación de la orientación
+## 7.10 Interpretación de la orientación
 
 En la gráfica de orientación puede observarse visualmente una diferencia aproximada de \(360^\circ\) entre algunas representaciones de yaw obtenidas mediante odometría y VICON.
 
@@ -319,7 +319,7 @@ indica que ambas mediciones representan prácticamente la misma orientación fí
 
 ---
 
-## 8.11 Comparación de las dos pruebas experimentales
+## 7.11 Comparación de las dos pruebas experimentales
 
 Las métricas de \(5.6\;cm\) y \(5.2\;cm\) corresponden a **corridas experimentales diferentes**.
 
@@ -341,7 +341,7 @@ La segunda prueba proporciona una validación más completa debido a que permite
 
 ---
 
-## 8.12 Resumen de resultados
+## 7.12 Resumen de resultados
 
 Los principales resultados obtenidos durante el desarrollo experimental se resumen en la siguiente tabla:
 
@@ -365,7 +365,7 @@ Los principales resultados obtenidos durante el desarrollo experimental se resum
 
 ---
 
-## 8.13 Resultado final
+## 7.13 Resultado final
 
 Los resultados obtenidos permiten evaluar el sistema en diferentes niveles.
 
