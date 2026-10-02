@@ -32,11 +32,11 @@ El proyecto integra la adquisición experimental de información mediante el sis
 
 ## Demostración experimental
 
-Como evidencia del funcionamiento del sistema desarrollado, se realizó una prueba física del **DJI RoboMaster S1** utilizando el controlador neuronal implementado.
+Como evidencia del funcionamiento del sistema desarrollado, se realizaron diferentes pruebas físicas del **DJI RoboMaster S1** utilizando el controlador neuronal implementado.
 
-En el video se observa la ejecución del controlador y el seguimiento de la trayectoria realizado por el robot durante la validación experimental.
+Las grabaciones permiten observar diferentes etapas de la ejecución y validación experimental del sistema.
 
-**[▶ Ver video de la prueba experimental](TU_ENLACE)**
+**[▶ Ver videos de las pruebas experimentales](https://github.com/vmolvera/Evaluaci-n1_Control_Inteligente/tree/main/assets/videos)**
 
 ---
 
